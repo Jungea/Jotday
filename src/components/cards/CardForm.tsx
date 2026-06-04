@@ -2,10 +2,10 @@
 
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { ImageIcon, Type, LayoutGrid, X, Upload } from "lucide-react";
+import { X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
-import type { Card, CardType } from "@/types";
+import type { Card } from "@/types";
 
 interface CardFormProps {
   date: string;
@@ -14,14 +14,8 @@ interface CardFormProps {
   onCancel: () => void;
 }
 
-const CARD_TYPES: { type: CardType; label: string; icon: React.ReactNode }[] = [
-  { type: "image", label: "이미지", icon: <ImageIcon size={18} /> },
-  { type: "text", label: "텍스트", icon: <Type size={18} /> },
-  { type: "mixed", label: "혼합", icon: <LayoutGrid size={18} /> },
-];
-
 export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps) {
-  const [cardType, setCardType] = useState<CardType>(editCard?.type ?? "mixed");
+  const cardType = "mixed";
   const [title, setTitle] = useState(editCard?.title ?? "");
   const [content, setContent] = useState(editCard?.content ?? "");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -95,8 +89,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setLoading(false);
   }
 
-  const needsImage = cardType === "image" || cardType === "mixed";
-  const needsText = cardType === "text" || cardType === "mixed";
+  const needsImage = true;
+  const needsText = true;
 
   return (
     <>
@@ -119,24 +113,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
 
         {/* 스크롤 영역 */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
-          {/* Card type selector */}
-          <div className="flex gap-2 mb-4">
-            {CARD_TYPES.map(({ type, label, icon }) => (
-              <button
-                key={type}
-                onClick={() => setCardType(type)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  cardType === type
-                    ? "bg-amber-500 text-white border-amber-500"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-amber-300"
-                }`}
-              >
-                {icon}
-                {label}
-              </button>
-            ))}
-          </div>
-
           <form id="card-form" onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
