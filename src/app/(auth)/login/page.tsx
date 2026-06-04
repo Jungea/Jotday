@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,8 +32,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-700">Jotday</h1>
-          <p className="text-gray-500 text-sm mt-1">나만의 이미지 달력 일기</p>
+          <Logo height={56} className="text-amber-700 mx-auto" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -69,12 +68,6 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
-          계정이 없으신가요?{" "}
-          <Link href="/register" className="text-amber-600 font-medium hover:underline">
-            회원가입
-          </Link>
-        </p>
       </div>
     </div>
   );

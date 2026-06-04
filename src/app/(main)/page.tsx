@@ -6,6 +6,7 @@ import { Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
+import { Logo } from "@/components/Logo";
 import { useThemeStore } from "@/store/theme";
 import { createClient } from "@/lib/supabase/client";
 import type { DayMeta } from "@/types";
@@ -38,9 +39,7 @@ export default function HomePage() {
     <div className={`min-h-screen ${isCork ? "theme-cork" : "theme-card"}`}>
       {/* Navbar */}
       <nav className={`flex items-center justify-between px-6 py-4 ${isCork ? "bg-amber-800/30" : "bg-white border-b border-gray-100 shadow-sm"}`}>
-        <h1 className={`text-xl font-bold tracking-wide ${isCork ? "text-amber-100" : "text-amber-700"}`}>
-          Jotday
-        </h1>
+        <Logo height={44} className={isCork ? "text-amber-100" : "text-amber-700"} />
         <div className="flex items-center gap-2">
           <Link
             href="/settings"
