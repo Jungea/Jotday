@@ -15,6 +15,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const router = useRouter();
   const [cards, setCards] = useState<Card[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editCard, setEditCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
   const theme = useThemeStore((s) => s.theme);
 
@@ -32,6 +33,10 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   async function handleDelete(id: string) {
     const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
     if (res.ok) setCards((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  function handleEdit(card: Card) {
+    setEditCard(card);
   }
 
   const parsedDate = parseISO(date);
@@ -79,7 +84,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
               : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           }>
             {cards.map((card) => (
-              <CardItem key={card.id} card={card} onDelete={handleDelete} />
+              <CardItem key={card.id} card={card} onDelete={handleDelete} onEdit={handleEdit} />
             ))}
           </div>
         )}
@@ -93,6 +98,18 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
             fetchCards();
           }}
           onCancel={() => setShowForm(false)}
+        />
+      )}
+
+      {editCard && (
+        <CardForm
+          date={date}
+          editCard={editCard}
+          onSuccess={() => {
+            setEditCard(null);
+            fetchCards();
+          }}
+          onCancel={() => setEditCard(null)}
         />
       )}
     </div>
