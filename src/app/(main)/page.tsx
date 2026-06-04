@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { format } from "date-fns";
+import { format, addMonths, subMonths, parse } from "date-fns";
 import { Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,8 +18,14 @@ export default function HomePage() {
   const router = useRouter();
 
   const fetchMetas = useCallback(async (month: string) => {
-    const res = await fetch(`/api/cards?month=${month}`);
-    if (res.ok) setDayMetas(await res.json());
+    const base = parse(month, "yyyy-MM", new Date());
+    const months = [
+      format(subMonths(base, 1), "yyyy-MM"),
+      month,
+      format(addMonths(base, 1), "yyyy-MM"),
+    ];
+    const results = await Promise.all(months.map((m) => fetch(`/api/cards?month=${m}`).then((r) => r.ok ? r.json() : [])));
+    setDayMetas(results.flat());
   }, []);
 
   useEffect(() => {
