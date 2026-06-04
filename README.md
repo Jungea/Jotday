@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jotday
 
-## Getting Started
+이미지와 텍스트 카드로 날짜별 기록을 남기는 개인 일기 서비스.
 
-First, run the development server:
+## 기술 스택
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS v4
+- **Auth & DB**: Supabase (Row Level Security 적용)
+- **이미지 저장**: Cloudinary (25GB 무료)
+- **상태 관리**: Zustand (테마 persist)
+
+## 주요 기능
+
+- 월간 달력 뷰 — 기록이 있는 날짜에 썸네일 표시
+- 카드 타입: 이미지 / 텍스트 / 이미지+텍스트 혼합
+- 테마 전환: **Cork** (코르크보드 아날로그) / **Card** (그리드 모던)
+- Supabase SSR 기반 인증 (로그인 / 회원가입)
+
+## 프로젝트 구조
+
+```
+src/
+├── app/
+│   ├── (auth)/login, register     # 인증 페이지
+│   ├── (main)/                    # 인증 필요 영역
+│   │   ├── page.tsx               # 홈 (달력)
+│   │   ├── [date]/page.tsx        # 날짜별 카드 목록
+│   │   └── settings/page.tsx      # 테마 설정
+│   └── api/cards/route.ts         # REST API (GET/POST/DELETE)
+├── components/
+│   ├── calendar/CalendarGrid.tsx
+│   ├── cards/CardItem.tsx
+│   ├── cards/CardForm.tsx
+│   └── ui/Button, ThemeWrapper
+├── lib/supabase/                  # client, server, middleware
+├── lib/cloudinary/
+├── store/theme.ts
+└── types/index.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 시작하기
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. 환경변수 설정
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cp .env.local.example .env.local
+```
 
-## Learn More
+`.env.local`에 아래 값을 채워넣으세요:
 
-To learn more about Next.js, take a look at the following resources:
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Supabase 스키마 적용
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Supabase 대시보드 SQL Editor에서 `supabase/schema.sql`을 실행하세요.
 
-## Deploy on Vercel
+### 3. 개발 서버 실행
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+npm run dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[http://localhost:3000](http://localhost:3000)에서 확인.
