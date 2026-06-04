@@ -243,24 +243,23 @@ function DayCell({
 
       {/* 날짜 — 모바일: 상단 가운데 / 데스크탑: 좌상단 */}
       <span
-        className={`absolute z-10 text-xs font-medium
-          top-1.5 left-1/2 -translate-x-1/2 w-6 h-6 flex items-center justify-center rounded-full
-          sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block
+        className={`absolute z-10 text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full
+          top-1.5 left-1/2 -translate-x-1/2
           ${isToday
             ? isDark
-              ? "bg-white text-black"
-              : "bg-gray-900 text-white"
+              ? "bg-white text-black sm:top-1 sm:left-1.5 sm:translate-x-0"
+              : "bg-gray-900 text-white sm:top-1 sm:left-1.5 sm:translate-x-0"
             : isSelected
             ? isDark
-              ? "border-2 border-white text-white sm:border-0"
-              : "border-2 border-gray-900 text-gray-900 sm:border-0"
+              ? "border-2 border-white text-white sm:border-0 sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block"
+              : "border-2 border-gray-900 text-gray-900 sm:border-0 sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block"
             : dow === 0
-            ? "text-red-400"
+            ? "text-red-400 sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block"
             : dow === 6
-            ? "text-blue-400"
+            ? "text-blue-400 sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block"
             : isDark
-            ? "text-gray-300"
-            : "text-gray-700"
+            ? "text-gray-300 sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block"
+            : "text-gray-700 sm:top-1 sm:left-1.5 sm:translate-x-0 sm:w-auto sm:h-auto sm:rounded-none sm:block"
           }`}
       >
         {dateNum}
