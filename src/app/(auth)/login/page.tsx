@@ -8,7 +8,7 @@ import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("jungea2241@gmail.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,14 +33,7 @@ export default function LoginPage() {
       <Logo height={52} className="text-white mb-12" />
 
       <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full bg-transparent border-b border-gray-700 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-400 transition-colors"
-          placeholder="이메일"
-        />
+        <input type="hidden" value={email} readOnly />
         <input
           type="password"
           value={password}

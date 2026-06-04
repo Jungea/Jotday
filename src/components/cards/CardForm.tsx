@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
+import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
 
 interface CardFormProps {
@@ -31,6 +32,7 @@ function initSlots(editCard?: Card): ImageSlot[] {
 }
 
 export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps) {
+  const isDark = useThemeStore((s) => s.theme === "dark");
   const cardType = "mixed";
   const [content, setContent] = useState(editCard?.content ?? "");
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
@@ -169,11 +171,11 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         />
       )}
       <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
-        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md max-h-[85dvh] flex flex-col">
+        <div className={`${isDark ? "bg-[#1c1c1c]" : "bg-white"} rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md max-h-[85dvh] flex flex-col`}>
           {/* 고정 헤더 */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
-            <h2 className="font-bold text-gray-900 text-lg">{isEdit ? "카드 수정" : `${date} 기록`}</h2>
-            <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+          <div className={`flex items-center justify-between px-5 pt-5 pb-3 border-b ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
+            <h2 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>{isEdit ? "카드 수정" : `${date} 기록`}</h2>
+            <button onClick={onCancel} className={isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}>
               <X size={20} />
             </button>
           </div>
@@ -183,12 +185,12 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
             <form id="card-form" onSubmit={handleSubmit} className="space-y-4">
               {isEdit ? (
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-500 whitespace-nowrap">기록 시간</label>
+                  <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>기록 시간</label>
                   <input
                     type="time"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
                   />
                 </div>
               ) : (
@@ -198,16 +200,16 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       type="checkbox"
                       checked={manualTime}
                       onChange={(e) => setManualTime(e.target.checked)}
-                      className="accent-amber-500 w-4 h-4"
+                      className="w-4 h-4"
                     />
-                    <span className="text-sm text-gray-500 whitespace-nowrap">시간 직접 설정</span>
+                    <span className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간 직접 설정</span>
                   </label>
                   {manualTime && (
                     <input
                       type="time"
                       value={time}
                       onChange={(e) => setTime(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
                     />
                   )}
                 </div>
@@ -246,7 +248,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-full h-14 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center gap-2 text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className={`w-full h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
               >
                 <Upload size={16} />
                 <span className="text-sm">
@@ -267,7 +269,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="오늘의 기록..."
                 rows={8}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none ${isDark ? "border-gray-700 bg-[#111] text-white placeholder-gray-600" : "border-gray-200 bg-white text-gray-900 placeholder-gray-400"}`}
               />
 
               {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -275,11 +277,21 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           </div>
 
           {/* 고정 하단 버튼 */}
-          <div className="flex gap-3 px-5 py-4 border-t border-gray-100 shrink-0">
-            <Button type="button" variant="secondary" onClick={onCancel} className="flex-1">
+          <div className={`flex gap-3 px-5 py-4 border-t ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
+              className={`flex-1 ${isDark ? "bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700" : ""}`}
+            >
               취소
             </Button>
-            <Button type="submit" form="card-form" className="flex-1" disabled={loading}>
+            <Button
+              type="submit"
+              form="card-form"
+              className="flex-1"
+              disabled={loading}
+            >
               {loading
                 ? (isEdit ? "수정 중..." : "저장 중...")
                 : (isEdit ? "수정" : newCount > 1 ? `저장 (${newCount})` : "저장")}
