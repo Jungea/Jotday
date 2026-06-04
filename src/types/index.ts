@@ -1,5 +1,5 @@
 export type CardType = "image" | "text" | "mixed";
-export type Theme = "cork" | "card";
+export type Theme = "light" | "dark";
 
 export interface Card {
   id: string;

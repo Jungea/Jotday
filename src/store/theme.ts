@@ -9,12 +9,21 @@ interface ThemeStore {
   setTheme: (theme: Theme) => void;
 }
 
+const VALID_THEMES: Theme[] = ["light", "dark"];
+
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set) => ({
-      theme: "card",
+      theme: "dark",
       setTheme: (theme) => set({ theme }),
     }),
-    { name: "jotday-theme" }
+    {
+      name: "jotday-theme",
+      onRehydrateStorage: () => (state) => {
+        if (state && !VALID_THEMES.includes(state.theme)) {
+          state.theme = "dark";
+        }
+      },
+    }
   )
 );

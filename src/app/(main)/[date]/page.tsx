@@ -56,59 +56,53 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   }
 
   const parsedDate = parseISO(date);
-  const isCork = theme === "cork";
+  const isDark = theme === "dark";
   const formattedDate = format(parsedDate, "yyyy년 M월 d일 (E)", { locale: ko });
 
   return (
-    <div className={`h-dvh flex flex-col overflow-hidden ${isCork ? "theme-cork" : "theme-card"}`}>
+    <div className={`h-dvh flex flex-col overflow-hidden ${isDark ? "theme-dark" : "theme-light"}`}>
       {/* Header */}
-      <header className={`flex items-center gap-3 px-5 py-4 shrink-0 ${isCork ? "bg-amber-800/30" : "bg-white border-b border-gray-100 shadow-sm"}`}>
+      <header className={`flex items-center gap-3 px-5 py-4 shrink-0 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
         <button
           onClick={() => router.back()}
-          className={`p-1.5 rounded-full transition-colors ${isCork ? "hover:bg-amber-800/30 text-amber-100" : "hover:bg-gray-100 text-gray-500"}`}
+          className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className={`font-bold text-lg ${isCork ? "text-amber-100" : "text-gray-900"}`}>
+        <h1 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>
           {formattedDate}
           {!loading && cards.length > 0 && (
-            <span className={`ml-2 text-sm font-normal ${isCork ? "text-amber-300" : "text-amber-500"}`}>
+            <span className={`ml-2 text-sm font-normal ${isDark ? "text-gray-400" : "text-gray-400"}`}>
               {cards.length}
             </span>
           )}
         </h1>
         <button
           onClick={() => setShowForm(true)}
-          className="ml-auto bg-amber-500 hover:bg-amber-600 text-white rounded-full p-2 transition-colors shadow"
+          className={`ml-auto rounded-full p-2 transition-colors shadow ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
         >
           <Plus size={18} />
         </button>
       </header>
 
       {/* Cards */}
-      <main className={`flex-1 overflow-y-auto ${isCork ? "p-4" : ""}`}>
+      <main className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="w-8 h-8 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
           </div>
         ) : cards.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
-            <div className={`text-5xl ${isCork ? "opacity-70" : ""}`}>📝</div>
-            <p className={`text-sm ${isCork ? "text-amber-200" : "text-gray-400"}`}>
+            <div className="text-5xl">📝</div>
+            <p className={`text-sm ${isDark ? "text-gray-500" : "text-gray-400"}`}>
               아직 기록이 없어요. + 버튼을 눌러 추가해보세요!
             </p>
-          </div>
-        ) : isCork ? (
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
-            {cards.map((card) => (
-              <CardItem key={card.id} card={card} onDelete={handleDelete} onEdit={handleEdit} onSetRepresentative={handleSetRepresentative} />
-            ))}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             {cards.map((card) => (
               <div key={card.id} className="w-full max-w-sm">
-                <CardItem card={card} onDelete={handleDelete} onEdit={handleEdit} onSetRepresentative={handleSetRepresentative} />
+                <CardItem card={card} isDark={isDark} onDelete={handleDelete} onEdit={handleEdit} onSetRepresentative={handleSetRepresentative} />
               </div>
             ))}
           </div>

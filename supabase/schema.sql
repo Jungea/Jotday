@@ -28,7 +28,7 @@ CREATE POLICY "Users can manage own cards" ON cards
 -- User settings table
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  theme TEXT NOT NULL DEFAULT 'card' CHECK (theme IN ('cork', 'card')),
+  theme TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('light', 'dark')),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

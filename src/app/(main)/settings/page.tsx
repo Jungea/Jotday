@@ -5,41 +5,30 @@ import { ArrowLeft, Check } from "lucide-react";
 import { useThemeStore } from "@/store/theme";
 import type { Theme } from "@/types";
 
-const THEMES: { id: Theme; label: string; desc: string; emoji: string }[] = [
-  {
-    id: "cork",
-    label: "Cork",
-    desc: "코르크보드 아날로그 감성",
-    emoji: "📌",
-  },
-  {
-    id: "card",
-    label: "Card",
-    desc: "그리드 카드 모던 클린",
-    emoji: "🗂️",
-  },
+const THEMES: { id: Theme; label: string; desc: string }[] = [
+  { id: "light", label: "라이트", desc: "화이트 모노톤" },
+  { id: "dark", label: "다크", desc: "블랙 모노톤" },
 ];
 
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useThemeStore();
-  const isCork = theme === "cork";
+  const isDark = theme === "dark";
 
   return (
-    <div className={`min-h-screen ${isCork ? "theme-cork" : "theme-card"}`}>
-      {/* Header */}
-      <header className={`flex items-center gap-3 px-5 py-4 ${isCork ? "bg-amber-800/30" : "bg-white border-b border-gray-100 shadow-sm"}`}>
+    <div className={isDark ? "theme-dark min-h-screen" : "theme-light min-h-screen"}>
+      <header className={`flex items-center gap-3 px-5 py-4 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
         <button
           onClick={() => router.back()}
-          className={`p-1.5 rounded-full transition-colors ${isCork ? "hover:bg-amber-800/30 text-amber-100" : "hover:bg-gray-100 text-gray-500"}`}
+          className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className={`font-bold text-lg ${isCork ? "text-amber-100" : "text-gray-900"}`}>설정</h1>
+        <h1 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>설정</h1>
       </header>
 
       <main className="p-6 max-w-md mx-auto">
-        <h2 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${isCork ? "text-amber-200" : "text-gray-400"}`}>
+        <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDark ? "text-gray-500" : "text-gray-400"}`}>
           테마
         </h2>
         <div className="space-y-3">
@@ -49,23 +38,21 @@ export default function SettingsPage() {
               onClick={() => setTheme(t.id)}
               className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
                 theme === t.id
-                  ? "border-amber-500 bg-amber-50"
-                  : isCork
-                  ? "border-amber-800/30 bg-amber-100/20 hover:bg-amber-100/30"
-                  : "border-gray-100 bg-white hover:border-amber-200"
+                  ? isDark
+                    ? "border-white bg-gray-800"
+                    : "border-gray-900 bg-gray-50"
+                  : isDark
+                  ? "border-gray-800 bg-[#1c1c1c] hover:border-gray-700"
+                  : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <span className="text-2xl">{t.emoji}</span>
+              <div className={`w-8 h-8 rounded-full border-2 shrink-0 ${t.id === "dark" ? "bg-gray-900 border-gray-700" : "bg-white border-gray-300"}`} />
               <div className="flex-1 text-left">
-                <div className={`font-semibold ${isCork && theme !== t.id ? "text-amber-100" : "text-gray-900"}`}>
-                  {t.label}
-                </div>
-                <div className={`text-sm ${isCork && theme !== t.id ? "text-amber-200" : "text-gray-500"}`}>
-                  {t.desc}
-                </div>
+                <div className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{t.label}</div>
+                <div className={`text-sm ${isDark ? "text-gray-500" : "text-gray-400"}`}>{t.desc}</div>
               </div>
               {theme === t.id && (
-                <Check size={18} className="text-amber-500 shrink-0" />
+                <Check size={18} className={isDark ? "text-white shrink-0" : "text-gray-900 shrink-0"} />
               )}
             </button>
           ))}

@@ -33,23 +33,23 @@ export default function HomePage() {
     router.refresh();
   }
 
-  const isCork = theme === "cork";
+  const isDark = theme === "dark";
 
   return (
-    <div className={`min-h-screen ${isCork ? "theme-cork" : "theme-card"}`}>
+    <div className={isDark ? "theme-dark" : "theme-light"}>
       {/* Navbar */}
-      <nav className={`flex items-center justify-between px-6 py-4 ${isCork ? "bg-amber-800/30" : "bg-white border-b border-gray-100 shadow-sm"}`}>
-        <Logo height={44} className={isCork ? "text-amber-100" : "text-amber-700"} />
+      <nav className={`flex items-center justify-between px-6 py-4 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
+        <Logo height={44} className={isDark ? "text-white" : "text-gray-900"} />
         <div className="flex items-center gap-2">
           <Link
             href="/settings"
-            className={`p-2 rounded-full transition-colors ${isCork ? "hover:bg-amber-800/30 text-amber-100" : "hover:bg-gray-100 text-gray-500"}`}
+            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
           >
             <Settings size={18} />
           </Link>
           <button
             onClick={handleLogout}
-            className={`p-2 rounded-full transition-colors ${isCork ? "hover:bg-amber-800/30 text-amber-100" : "hover:bg-gray-100 text-gray-500"}`}
+            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
           >
             <LogOut size={18} />
           </button>

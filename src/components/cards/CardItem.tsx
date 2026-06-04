@@ -8,6 +8,7 @@ import type { Card } from "@/types";
 
 interface CardItemProps {
   card: Card;
+  isDark?: boolean;
   onDelete?: (id: string) => void;
   onEdit?: (card: Card) => void;
   onSetRepresentative?: (id: string) => void;
@@ -69,7 +70,6 @@ function ImageSwiper({ images }: { images: { url: string }[] }) {
           <img key={i} src={img.url} alt="" draggable={false} className="h-auto pointer-events-none" style={{ width: `${100 / images.length}%` }} />
         ))}
       </div>
-      {/* Dot indicators */}
       <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
         {images.map((_, i) => (
           <button
@@ -77,49 +77,6 @@ function ImageSwiper({ images }: { images: { url: string }[] }) {
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setIndex(i)}
             className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-white" : "bg-white/50"}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CorkImageSwiper({ images }: { images: { url: string }[] }) {
-  const { index, setIndex, onPointerDown, onPointerUp, onPointerLeave } = useSwipe(images.length);
-
-  if (images.length === 0) return null;
-  if (images.length === 1) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={images[0].url} alt="" className="w-full h-auto rounded-sm mb-3" />;
-  }
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-sm mb-3 cursor-grab active:cursor-grabbing select-none"
-      style={{ touchAction: "pan-y" }}
-      onPointerDown={onPointerDown}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerLeave}
-    >
-      <div
-        className="flex transition-transform duration-200"
-        style={{
-          width: `${images.length * 100}%`,
-          transform: `translateX(${-(index * 100) / images.length}%)`,
-        }}
-      >
-        {images.map((img, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={i} src={img.url} alt="" draggable={false} className="h-auto rounded-sm pointer-events-none" style={{ width: `${100 / images.length}%` }} />
-        ))}
-      </div>
-      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-        {images.map((_, i) => (
-          <button
-            key={i}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={() => setIndex(i)}
-            className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-amber-800" : "bg-amber-800/40"}`}
           />
         ))}
       </div>
@@ -140,17 +97,11 @@ function ExpandableContent({ text, className }: { text: string; className: strin
 
   return (
     <div>
-      <p
-        ref={ref}
-        className={`${className} whitespace-pre-wrap ${expanded ? "" : "line-clamp-3"}`}
-      >
+      <p ref={ref} className={`${className} whitespace-pre-wrap ${expanded ? "" : "line-clamp-3"}`}>
         {text}
       </p>
       {(clamped || expanded) && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="text-xs text-amber-500 mt-1"
-        >
+        <button onClick={() => setExpanded((v) => !v)} className="text-xs text-gray-400 mt-1">
           {expanded ? "접기" : "더보기"}
         </button>
       )}
@@ -158,9 +109,9 @@ function ExpandableContent({ text, className }: { text: string; className: strin
   );
 }
 
-export function CardItem({ card, onDelete, onEdit, onSetRepresentative }: CardItemProps) {
+export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepresentative }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
-  const isCork = theme === "cork";
+  const isDark = isDarkProp ?? theme === "dark";
   const timeLabel = format(new Date(card.created_at), "HH:mm");
 
   const images = card.images?.length > 0
@@ -170,91 +121,46 @@ export function CardItem({ card, onDelete, onEdit, onSetRepresentative }: CardIt
       : [];
   const hasImage = images.length > 0;
 
-  if (isCork) {
-    return (
-      <div
-        className={`relative bg-[#fdf6e3] rounded-sm p-4 group ${card.is_representative ? "ring-2 ring-amber-400 shadow-[0_0_0_3px_#f59e0b,0_0_40px_10px_rgba(245,158,11,0.3),2px_4px_8px_rgba(0,0,0,0.25)]" : "shadow-[2px_4px_8px_rgba(0,0,0,0.25)]"}`}
-        style={{
-          transform: `rotate(${Math.random() > 0.5 ? 1 : -1}deg)`,
-        }}
-      >
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-red-500 shadow" />
+  const repGlow = isDark
+    ? "ring-2 ring-white shadow-[0_0_0_2px_#fff,0_0_40px_10px_rgba(255,255,255,0.15)]"
+    : "ring-2 ring-amber-400 shadow-[0_0_0_2px_#fbbf24,0_0_40px_12px_rgba(251,191,36,0.4)]";
 
-        {images.length > 0 && <CorkImageSwiper images={images} />}
-        {card.title && (
-          <h3 className="text-sm font-bold text-amber-900 mb-1">{card.title}</h3>
-        )}
-        {card.content && (
-          <ExpandableContent text={card.content} className="text-xs text-amber-800 leading-relaxed" />
-        )}
-
-        <div className="flex items-center justify-between mt-2">
-          <p className="text-[10px] text-amber-600/60">{timeLabel}</p>
-          <div className="flex gap-2 sm:hidden">
-            {onSetRepresentative && hasImage && (
-              <button onClick={() => onSetRepresentative(card.id)} className={card.is_representative ? "text-amber-400" : "text-amber-300"}>
-                <Star size={13} fill={card.is_representative ? "currentColor" : "none"} />
-              </button>
-            )}
-            {onEdit && (
-              <button onClick={() => onEdit(card)} className="text-amber-600">
-                <Pencil size={13} />
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={() => onDelete(card.id)} className="text-red-400">
-                <Trash2 size={13} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
-          {onSetRepresentative && hasImage && (
-            <button onClick={() => onSetRepresentative(card.id)} className={card.is_representative ? "text-amber-400" : "text-amber-600/50 hover:text-amber-400"}>
-              <Star size={14} fill={card.is_representative ? "currentColor" : "none"} />
-            </button>
-          )}
-          {onEdit && (
-            <button onClick={() => onEdit(card)} className="text-amber-600 hover:text-amber-800">
-              <Pencil size={14} />
-            </button>
-          )}
-          {onDelete && (
-            <button onClick={() => onDelete(card.id)} className="text-red-400 hover:text-red-600">
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const btnBg = isDark ? "bg-gray-800" : "bg-white";
+  const starColor = isDark ? "text-white" : "text-gray-900";
+  const starDimColor = isDark ? "text-gray-600 hover:text-white" : "text-gray-300 hover:text-gray-900";
 
   return (
-    <div className={`relative bg-white rounded-xl overflow-hidden group ${card.is_representative ? "ring-2 ring-amber-400 shadow-[0_0_0_3px_#f59e0b,0_0_40px_10px_rgba(245,158,11,0.3)]" : "shadow-sm border border-gray-100"}`}>
+    <div className={`relative rounded-xl overflow-hidden group ${
+      isDark
+        ? `bg-[#1c1c1c] border border-gray-800 ${card.is_representative ? repGlow : "shadow-none"}`
+        : `bg-white ${card.is_representative ? repGlow : "shadow-sm border border-gray-200"}`
+    }`}>
       {images.length > 0 && <ImageSwiper images={images} />}
       <div className="p-4">
-        {card.title && (
-          <h3 className="font-semibold text-gray-900 mb-1">{card.title}</h3>
-        )}
         {card.content && (
-          <ExpandableContent text={card.content} className="text-sm text-gray-600 leading-relaxed" />
+          <ExpandableContent
+            text={card.content}
+            className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
+          />
         )}
         <div className="flex items-center justify-between mt-2">
-          <p className="text-xs text-gray-400">{timeLabel}</p>
+          <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
           <div className="flex gap-1 sm:hidden">
             {onSetRepresentative && hasImage && (
-              <button onClick={() => onSetRepresentative(card.id)} className={`bg-white rounded-full p-1.5 shadow ${card.is_representative ? "text-amber-400" : "text-gray-300"}`}>
+              <button
+                onClick={() => onSetRepresentative(card.id)}
+                className={`${btnBg} rounded-full p-1.5 shadow ${card.is_representative ? starColor : starDimColor}`}
+              >
                 <Star size={13} fill={card.is_representative ? "currentColor" : "none"} />
               </button>
             )}
             {onEdit && (
-              <button onClick={() => onEdit(card)} className="bg-white rounded-full p-1.5 shadow text-amber-500">
+              <button onClick={() => onEdit(card)} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
                 <Pencil size={13} />
               </button>
             )}
             {onDelete && (
-              <button onClick={() => onDelete(card.id)} className="bg-white rounded-full p-1.5 shadow text-red-400">
+              <button onClick={() => onDelete(card.id)} className={`${btnBg} rounded-full p-1.5 shadow text-red-400`}>
                 <Trash2 size={13} />
               </button>
             )}
@@ -266,24 +172,18 @@ export function CardItem({ card, onDelete, onEdit, onSetRepresentative }: CardIt
         {onSetRepresentative && hasImage && (
           <button
             onClick={() => onSetRepresentative(card.id)}
-            className={`bg-white rounded-full p-1.5 shadow ${card.is_representative ? "text-amber-400" : "text-gray-300 hover:text-amber-400"}`}
+            className={`${btnBg} rounded-full p-1.5 shadow ${card.is_representative ? starColor : starDimColor}`}
           >
             <Star size={14} fill={card.is_representative ? "currentColor" : "none"} />
           </button>
         )}
         {onEdit && (
-          <button
-            onClick={() => onEdit(card)}
-            className="bg-white rounded-full p-1.5 shadow text-amber-500 hover:text-amber-700"
-          >
+          <button onClick={() => onEdit(card)} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}>
             <Pencil size={14} />
           </button>
         )}
         {onDelete && (
-          <button
-            onClick={() => onDelete(card.id)}
-            className="bg-white rounded-full p-1.5 shadow text-red-400 hover:text-red-600"
-          >
+          <button onClick={() => onDelete(card.id)} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>
             <Trash2 size={14} />
           </button>
         )}

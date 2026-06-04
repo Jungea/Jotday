@@ -29,46 +29,37 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 p-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <Logo height={56} className="text-amber-700 mx-auto" />
-        </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#111] px-8">
+      <Logo height={52} className="text-white mb-12" />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              placeholder="••••••••"
-            />
-          </div>
+      <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full bg-transparent border-b border-gray-700 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-400 transition-colors"
+          placeholder="이메일"
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full bg-transparent border-b border-gray-700 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-gray-400 transition-colors"
+          placeholder="비밀번호"
+        />
 
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
-          )}
+        {error && <p className="text-red-400 text-xs">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "로그인 중..." : "로그인"}
-          </Button>
-        </form>
-
-      </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full mt-2 py-2.5 text-sm font-medium text-black bg-white rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+        >
+          {loading ? "로그인 중..." : "로그인"}
+        </button>
+      </form>
     </div>
   );
 }
