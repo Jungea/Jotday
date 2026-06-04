@@ -32,7 +32,7 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
           <img
             src={card.image_url}
             alt={card.title ?? ""}
-            className="w-full h-40 object-cover rounded-sm mb-3"
+            className="w-full h-auto rounded-sm mb-3"
           />
         )}
         {card.title && (
@@ -68,7 +68,7 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
         <img
           src={card.image_url}
           alt={card.title ?? ""}
-          className="w-full h-48 object-cover"
+          className="w-full h-auto"
         />
       )}
       <div className="p-4">

@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useState, useCallback } from "react";
+import { use, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
@@ -17,13 +17,21 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const [showForm, setShowForm] = useState(false);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const touchStartX = useRef<number>(0);
   const theme = useThemeStore((s) => s.theme);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
     const res = await fetch(`/api/cards?date=${date}`);
-    if (res.ok) setCards(await res.json());
+    if (res.ok) {
+      const data: Card[] = await res.json();
+      setCards(data);
+      setLoading(false);
+      return data;
+    }
     setLoading(false);
+    return [];
   }, [date]);
 
   useEffect(() => {
@@ -32,11 +40,27 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
 
   async function handleDelete(id: string) {
     const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
-    if (res.ok) setCards((prev) => prev.filter((c) => c.id !== id));
+    if (res.ok) {
+      setCards((prev) => {
+        const next = prev.filter((c) => c.id !== id);
+        setCurrentIndex((i) => Math.min(i, Math.max(0, next.length - 1)));
+        return next;
+      });
+    }
   }
 
   function handleEdit(card: Card) {
     setEditCard(card);
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (diff > 50) setCurrentIndex((i) => Math.min(i + 1, cards.length - 1));
+    else if (diff < -50) setCurrentIndex((i) => Math.max(i - 1, 0));
   }
 
   const parsedDate = parseISO(date);
@@ -77,15 +101,64 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
               아직 기록이 없어요. + 버튼을 눌러 추가해보세요!
             </p>
           </div>
-        ) : (
-          <div className={
-            isCork
-              ? "grid grid-cols-2 gap-6 sm:grid-cols-3"
-              : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          }>
+        ) : isCork ? (
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
             {cards.map((card) => (
               <CardItem key={card.id} card={card} onDelete={handleDelete} onEdit={handleEdit} />
             ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center">
+            {/* Swiper */}
+            <div
+              className="w-full overflow-hidden"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div
+                className="flex transition-transform duration-300 ease-in-out"
+                style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+              >
+                {cards.map((card) => (
+                  <div key={card.id} className="w-full flex-shrink-0 px-1">
+                    <CardItem card={card} onDelete={handleDelete} onEdit={handleEdit} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Controls */}
+            {cards.length > 1 && (
+              <div className="flex items-center gap-4 mt-5">
+                <button
+                  onClick={() => setCurrentIndex((i) => Math.max(i - 1, 0))}
+                  disabled={currentIndex === 0}
+                  className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 disabled:opacity-20 transition-opacity"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+
+                <div className="flex gap-2">
+                  {cards.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentIndex(i)}
+                      className={`w-2 h-2 rounded-full transition-colors ${
+                        i === currentIndex ? "bg-amber-500" : "bg-gray-300"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentIndex((i) => Math.min(i + 1, cards.length - 1))}
+                  disabled={currentIndex === cards.length - 1}
+                  className="p-1.5 rounded-full text-gray-400 hover:text-gray-700 disabled:opacity-20 transition-opacity"
+                >
+                  <ChevronRight size={22} />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -93,9 +166,10 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       {showForm && (
         <CardForm
           date={date}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowForm(false);
-            fetchCards();
+            const next = await fetchCards();
+            setCurrentIndex(Math.max(0, next.length - 1));
           }}
           onCancel={() => setShowForm(false)}
         />
