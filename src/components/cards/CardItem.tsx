@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Pencil, Star } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
@@ -10,6 +10,7 @@ interface CardItemProps {
   card: Card;
   onDelete?: (id: string) => void;
   onEdit?: (card: Card) => void;
+  onSetRepresentative?: (id: string) => void;
 }
 
 function useSwipe(count: number) {
@@ -157,7 +158,7 @@ function ExpandableContent({ text, className }: { text: string; className: strin
   );
 }
 
-export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
+export function CardItem({ card, onDelete, onEdit, onSetRepresentative }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isCork = theme === "cork";
   const timeLabel = format(new Date(card.created_at), "HH:mm");
@@ -167,11 +168,12 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
     : card.image_url
       ? [{ url: card.image_url, public_id: card.image_public_id ?? "" }]
       : [];
+  const hasImage = images.length > 0;
 
   if (isCork) {
     return (
       <div
-        className="relative bg-[#fdf6e3] rounded-sm shadow-[2px_4px_8px_rgba(0,0,0,0.25)] p-4 group"
+        className={`relative bg-[#fdf6e3] rounded-sm p-4 group ${card.is_representative ? "ring-2 ring-amber-400 shadow-[0_0_0_3px_#f59e0b,0_0_40px_10px_rgba(245,158,11,0.3),2px_4px_8px_rgba(0,0,0,0.25)]" : "shadow-[2px_4px_8px_rgba(0,0,0,0.25)]"}`}
         style={{
           transform: `rotate(${Math.random() > 0.5 ? 1 : -1}deg)`,
         }}
@@ -189,6 +191,11 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
         <div className="flex items-center justify-between mt-2">
           <p className="text-[10px] text-amber-600/60">{timeLabel}</p>
           <div className="flex gap-2 sm:hidden">
+            {onSetRepresentative && hasImage && (
+              <button onClick={() => onSetRepresentative(card.id)} className={card.is_representative ? "text-amber-400" : "text-amber-300"}>
+                <Star size={13} fill={card.is_representative ? "currentColor" : "none"} />
+              </button>
+            )}
             {onEdit && (
               <button onClick={() => onEdit(card)} className="text-amber-600">
                 <Pencil size={13} />
@@ -203,6 +210,11 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
         </div>
 
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
+          {onSetRepresentative && hasImage && (
+            <button onClick={() => onSetRepresentative(card.id)} className={card.is_representative ? "text-amber-400" : "text-amber-600/50 hover:text-amber-400"}>
+              <Star size={14} fill={card.is_representative ? "currentColor" : "none"} />
+            </button>
+          )}
           {onEdit && (
             <button onClick={() => onEdit(card)} className="text-amber-600 hover:text-amber-800">
               <Pencil size={14} />
@@ -219,7 +231,7 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
   }
 
   return (
-    <div className="relative bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group">
+    <div className={`relative bg-white rounded-xl overflow-hidden group ${card.is_representative ? "ring-2 ring-amber-400 shadow-[0_0_0_3px_#f59e0b,0_0_40px_10px_rgba(245,158,11,0.3)]" : "shadow-sm border border-gray-100"}`}>
       {images.length > 0 && <ImageSwiper images={images} />}
       <div className="p-4">
         {card.title && (
@@ -231,6 +243,11 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
         <div className="flex items-center justify-between mt-2">
           <p className="text-xs text-gray-400">{timeLabel}</p>
           <div className="flex gap-1 sm:hidden">
+            {onSetRepresentative && hasImage && (
+              <button onClick={() => onSetRepresentative(card.id)} className={`bg-white rounded-full p-1.5 shadow ${card.is_representative ? "text-amber-400" : "text-gray-300"}`}>
+                <Star size={13} fill={card.is_representative ? "currentColor" : "none"} />
+              </button>
+            )}
             {onEdit && (
               <button onClick={() => onEdit(card)} className="bg-white rounded-full p-1.5 shadow text-amber-500">
                 <Pencil size={13} />
@@ -246,6 +263,14 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
       </div>
 
       <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
+        {onSetRepresentative && hasImage && (
+          <button
+            onClick={() => onSetRepresentative(card.id)}
+            className={`bg-white rounded-full p-1.5 shadow ${card.is_representative ? "text-amber-400" : "text-gray-300 hover:text-amber-400"}`}
+          >
+            <Star size={14} fill={card.is_representative ? "currentColor" : "none"} />
+          </button>
+        )}
         {onEdit && (
           <button
             onClick={() => onEdit(card)}

@@ -41,6 +41,16 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     if (res.ok) setCards((prev) => prev.filter((c) => c.id !== id));
   }
 
+  async function handleSetRepresentative(id: string) {
+    const formData = new FormData();
+    formData.append("id", id);
+    formData.append("set_representative", "true");
+    const res = await fetch("/api/cards", { method: "PATCH", body: formData });
+    if (res.ok) {
+      setCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
+    }
+  }
+
   function handleEdit(card: Card) {
     setEditCard(card);
   }
@@ -91,14 +101,14 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
         ) : isCork ? (
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
             {cards.map((card) => (
-              <CardItem key={card.id} card={card} onDelete={handleDelete} onEdit={handleEdit} />
+              <CardItem key={card.id} card={card} onDelete={handleDelete} onEdit={handleEdit} onSetRepresentative={handleSetRepresentative} />
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             {cards.map((card) => (
               <div key={card.id} className="w-full max-w-sm">
-                <CardItem card={card} onDelete={handleDelete} onEdit={handleEdit} />
+                <CardItem card={card} onDelete={handleDelete} onEdit={handleEdit} onSetRepresentative={handleSetRepresentative} />
               </div>
             ))}
           </div>

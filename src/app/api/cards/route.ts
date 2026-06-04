@@ -30,14 +30,15 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("cards")
-      .select("date, image_url")
+      .select("date, image_url, is_representative")
       .eq("user_id", user.id)
       .gte("date", start)
-      .lt("date", end);
+      .lt("date", end)
+      .order("created_at", { ascending: true });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Aggregate by date
+    // Aggregate by date — representative card's image takes priority
     const metaMap = new Map<string, { count: number; preview_image: string | null }>();
     for (const row of data ?? []) {
       const existing = metaMap.get(row.date);
@@ -45,7 +46,9 @@ export async function GET(request: NextRequest) {
         metaMap.set(row.date, { count: 1, preview_image: row.image_url });
       } else {
         existing.count++;
-        if (!existing.preview_image && row.image_url) {
+        if (row.is_representative && row.image_url) {
+          existing.preview_image = row.image_url;
+        } else if (!existing.preview_image && row.image_url) {
           existing.preview_image = row.image_url;
         }
       }
@@ -109,6 +112,34 @@ export async function PATCH(request: NextRequest) {
   const formData = await request.formData();
   const id = formData.get("id") as string;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  // 대표 카드 설정 (별도 처리)
+  if (formData.get("set_representative") === "true") {
+    const { data: card } = await supabase
+      .from("cards")
+      .select("date")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
+    if (!card) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    await supabase
+      .from("cards")
+      .update({ is_representative: false })
+      .eq("user_id", user.id)
+      .eq("date", card.date);
+
+    const { data, error } = await supabase
+      .from("cards")
+      .update({ is_representative: true })
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
 
   const type = formData.get("type") as string;
   const title = formData.get("title") as string | null;
