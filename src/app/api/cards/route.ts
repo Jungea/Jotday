@@ -69,18 +69,17 @@ export async function POST(request: NextRequest) {
   const type = formData.get("type") as string;
   const title = formData.get("title") as string | null;
   const content = formData.get("content") as string | null;
-  const imageFile = formData.get("image") as File | null;
+  const imageFiles = formData.getAll("image") as File[];
 
-  let image_url: string | null = null;
-  let image_public_id: string | null = null;
-
-  if (imageFile && imageFile.size > 0) {
-    const arrayBuffer = await imageFile.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const dataUri = `data:${imageFile.type};base64,${base64}`;
-    const uploaded = await uploadImage(dataUri, user.id);
-    image_url = uploaded.url;
-    image_public_id = uploaded.public_id;
+  const uploadedImages: { url: string; public_id: string }[] = [];
+  for (const file of imageFiles) {
+    if (file && file.size > 0) {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      const dataUri = `data:${file.type};base64,${base64}`;
+      const uploaded = await uploadImage(dataUri, user.id);
+      uploadedImages.push({ url: uploaded.url, public_id: uploaded.public_id });
+    }
   }
 
   const { data, error } = await supabase.from("cards").insert({
@@ -89,8 +88,9 @@ export async function POST(request: NextRequest) {
     type,
     title: title || null,
     content: content || null,
-    image_url,
-    image_public_id,
+    image_url: uploadedImages[0]?.url ?? null,
+    image_public_id: uploadedImages[0]?.public_id ?? null,
+    images: uploadedImages,
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -109,38 +109,52 @@ export async function PATCH(request: NextRequest) {
   const type = formData.get("type") as string;
   const title = formData.get("title") as string | null;
   const content = formData.get("content") as string | null;
-  const imageFile = formData.get("image") as File | null;
-  const removeImage = formData.get("remove_image") === "true";
-  const time = formData.get("time") as string | null; // HH:mm
+  const time = formData.get("time") as string | null;
+  const updateImages = formData.get("update_images") === "true";
+  const keepIds = formData.getAll("keep_id") as string[];
+  const newFiles = (formData.getAll("image") as File[]).filter((f) => f && f.size > 0);
 
   const { data: existing } = await supabase
     .from("cards")
-    .select("image_public_id, date, created_at")
+    .select("image_public_id, images, date, created_at")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  let image_url: string | null | undefined = undefined;
-  let image_public_id: string | null | undefined = undefined;
+  let newImages: { url: string; public_id: string }[] | undefined = undefined;
 
-  if (imageFile && imageFile.size > 0) {
-    if (existing.image_public_id) {
-      const { deleteImage } = await import("@/lib/cloudinary/config");
-      await deleteImage(existing.image_public_id);
-    }
-    const arrayBuffer = await imageFile.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const dataUri = `data:${imageFile.type};base64,${base64}`;
-    const uploaded = await uploadImage(dataUri, user.id);
-    image_url = uploaded.url;
-    image_public_id = uploaded.public_id;
-  } else if (removeImage && existing.image_public_id) {
+  if (updateImages) {
     const { deleteImage } = await import("@/lib/cloudinary/config");
-    await deleteImage(existing.image_public_id);
-    image_url = null;
-    image_public_id = null;
+    const storedImages: { url: string; public_id: string }[] = existing.images ?? [];
+
+    // Legacy single-image cards: add to storedImages if images array is empty
+    if (storedImages.length === 0 && existing.image_public_id) {
+      storedImages.push({ url: "", public_id: existing.image_public_id });
+    }
+
+    // Delete images not in keepIds
+    for (const img of storedImages) {
+      if (!keepIds.includes(img.public_id)) await deleteImage(img.public_id);
+    }
+
+    // Keep existing images in slot order
+    const kept = keepIds
+      .map((id) => storedImages.find((img) => img.public_id === id))
+      .filter((img): img is { url: string; public_id: string } => !!img);
+
+    // Upload new files
+    const uploaded: { url: string; public_id: string }[] = [];
+    for (const file of newFiles) {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      const dataUri = `data:${file.type};base64,${base64}`;
+      const result = await uploadImage(dataUri, user.id);
+      uploaded.push({ url: result.url, public_id: result.public_id });
+    }
+
+    newImages = [...kept, ...uploaded];
   }
 
   const updates: Record<string, unknown> = {
@@ -148,8 +162,11 @@ export async function PATCH(request: NextRequest) {
     title: title || null,
     content: content || null,
   };
-  if (image_url !== undefined) updates.image_url = image_url;
-  if (image_public_id !== undefined) updates.image_public_id = image_public_id;
+  if (newImages !== undefined) {
+    updates.images = newImages;
+    updates.image_url = newImages[0]?.url ?? null;
+    updates.image_public_id = newImages[0]?.public_id ?? null;
+  }
   if (time && existing.date) {
     updates.created_at = new Date(`${existing.date}T${time}:00`).toISOString();
   }
@@ -178,14 +195,16 @@ export async function DELETE(request: NextRequest) {
   // Get card to delete image
   const { data: card } = await supabase
     .from("cards")
-    .select("image_public_id")
+    .select("image_public_id, images")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
 
-  if (card?.image_public_id) {
+  if (card) {
     const { deleteImage } = await import("@/lib/cloudinary/config");
-    await deleteImage(card.image_public_id);
+    const imgs: { url: string; public_id: string }[] = card.images ?? [];
+    for (const img of imgs) await deleteImage(img.public_id);
+    if (card.image_public_id && imgs.length === 0) await deleteImage(card.image_public_id);
   }
 
   const { error } = await supabase.from("cards").delete().eq("id", id).eq("user_id", user.id);

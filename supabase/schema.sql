@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS cards (
   content TEXT,
   image_url TEXT,
   image_public_id TEXT,
+  images JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -47,3 +48,4 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER cards_updated_at
   BEFORE UPDATE ON cards
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+

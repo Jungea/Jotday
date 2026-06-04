@@ -8,6 +8,8 @@ const ASPECT_H = 5;
 
 interface Props {
   src: string;
+  current?: number;
+  total?: number;
   onConfirm: (file: File) => void;
   onCancel: () => void;
 }
@@ -26,7 +28,7 @@ function touchMid(t: TouchList) {
   return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 };
 }
 
-export function ImageCropModal({ src, onConfirm, onCancel }: Props) {
+export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const rafRef = useRef(0);
@@ -245,7 +247,9 @@ export function ImageCropModal({ src, onConfirm, onCancel }: Props) {
         >
           <X size={22} />
         </button>
-        <span className="text-white text-sm font-medium">사진 조절</span>
+        <span className="text-white text-sm font-medium">
+          {total && total > 1 ? `사진 조절 ${current} / ${total}` : "사진 조절"}
+        </span>
         <button
           className="text-amber-400 hover:text-amber-300 font-semibold w-10 h-10 flex items-center justify-center"
           style={{ pointerEvents: "auto" }}

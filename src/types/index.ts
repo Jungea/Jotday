@@ -10,6 +10,7 @@ export interface Card {
   content: string | null;
   image_url: string | null;
   image_public_id: string | null;
+  images: { url: string; public_id: string }[];
   created_at: string;
   updated_at: string;
 }
