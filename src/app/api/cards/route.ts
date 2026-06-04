@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
   const type = formData.get("type") as string;
   const title = formData.get("title") as string | null;
   const content = formData.get("content") as string | null;
+  const time = formData.get("time") as string | null;
   const imageFiles = formData.getAll("image") as File[];
 
   const uploadedImages: { url: string; public_id: string }[] = [];
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const { data, error } = await supabase.from("cards").insert({
+  const insertData: Record<string, unknown> = {
     user_id: user.id,
     date,
     type,
@@ -91,7 +92,10 @@ export async function POST(request: NextRequest) {
     image_url: uploadedImages[0]?.url ?? null,
     image_public_id: uploadedImages[0]?.public_id ?? null,
     images: uploadedImages,
-  }).select().single();
+  };
+  if (time) insertData.created_at = new Date(`${date}T${time}:00`).toISOString();
+
+  const { data, error } = await supabase.from("cards").insert(insertData).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });

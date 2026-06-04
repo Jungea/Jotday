@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
@@ -124,6 +124,37 @@ function CorkImageSwiper({ images }: { images: { url: string }[] }) {
   );
 }
 
+function ExpandableContent({ text, className }: { text: string; className: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    setClamped(el.scrollHeight > el.clientHeight);
+  }, [text]);
+
+  return (
+    <div>
+      <p
+        ref={ref}
+        className={`${className} whitespace-pre-wrap ${expanded ? "" : "line-clamp-3"}`}
+      >
+        {text}
+      </p>
+      {(clamped || expanded) && (
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs text-amber-500 mt-1"
+        >
+          {expanded ? "접기" : "더보기"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isCork = theme === "cork";
@@ -150,7 +181,7 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
           <h3 className="text-sm font-bold text-amber-900 mb-1">{card.title}</h3>
         )}
         {card.content && (
-          <p className="text-xs text-amber-800 leading-relaxed whitespace-pre-wrap">{card.content}</p>
+          <ExpandableContent text={card.content} className="text-xs text-amber-800 leading-relaxed" />
         )}
 
         <p className="text-[10px] text-amber-600/60 mt-2">{timeLabel}</p>
@@ -179,7 +210,7 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
           <h3 className="font-semibold text-gray-900 mb-1">{card.title}</h3>
         )}
         {card.content && (
-          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{card.content}</p>
+          <ExpandableContent text={card.content} className="text-sm text-gray-600 leading-relaxed" />
         )}
         <p className="text-xs text-gray-400 mt-2">{timeLabel}</p>
       </div>

@@ -32,9 +32,9 @@ function initSlots(editCard?: Card): ImageSlot[] {
 
 export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps) {
   const cardType = "mixed";
-  const [title, setTitle] = useState(editCard?.title ?? "");
   const [content, setContent] = useState(editCard?.content ?? "");
-  const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : "");
+  const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
+  const [manualTime, setManualTime] = useState(false);
 
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [slots, setSlots] = useState<ImageSlot[]>(() => initSlots(editCard));
@@ -112,7 +112,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       const formData = new FormData();
       formData.append("id", editCard.id);
       formData.append("type", cardType);
-      if (title) formData.append("title", title);
       if (content) formData.append("content", content);
       if (time) formData.append("time", time);
 
@@ -141,8 +140,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       const formData = new FormData();
       formData.append("date", date);
       formData.append("type", cardType);
-      if (title) formData.append("title", title);
       if (content) formData.append("content", content);
+      if (manualTime && time) formData.append("time", time);
       for (const s of newSlots) formData.append("image", s.file);
       const res = await fetch("/api/cards", { method: "POST", body: formData });
       if (!res.ok) {
@@ -182,15 +181,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           {/* 스크롤 영역 */}
           <div className="overflow-y-auto flex-1 px-5 py-4">
             <form id="card-form" onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="제목 (선택)"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-
-              {isEdit && (
+              {isEdit ? (
                 <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-500 whitespace-nowrap">기록 시간</label>
                   <input
@@ -199,6 +190,26 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                     onChange={(e) => setTime(e.target.value)}
                     className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                   />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={manualTime}
+                      onChange={(e) => setManualTime(e.target.checked)}
+                      className="accent-amber-500 w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-500 whitespace-nowrap">시간 직접 설정</span>
+                  </label>
+                  {manualTime && (
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  )}
                 </div>
               )}
 
@@ -235,9 +246,9 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-full h-32 border-2 border-dashed border-gray-200 rounded-lg flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full h-14 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center gap-2 text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
-                <Upload size={22} />
+                <Upload size={16} />
                 <span className="text-sm">
                   {slots.length > 0 ? "이미지 추가" : "이미지 업로드"}
                 </span>
@@ -255,7 +266,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="오늘의 기록..."
-                rows={4}
+                rows={8}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
               />
 
