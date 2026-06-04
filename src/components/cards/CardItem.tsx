@@ -51,6 +51,7 @@ function ImageSwiper({ images }: { images: { url: string }[] }) {
   return (
     <div
       className="relative overflow-hidden cursor-grab active:cursor-grabbing select-none"
+      style={{ touchAction: "pan-y" }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerLeave}
@@ -94,6 +95,7 @@ function CorkImageSwiper({ images }: { images: { url: string }[] }) {
   return (
     <div
       className="relative overflow-hidden rounded-sm mb-3 cursor-grab active:cursor-grabbing select-none"
+      style={{ touchAction: "pan-y" }}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerLeave}
@@ -184,9 +186,23 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
           <ExpandableContent text={card.content} className="text-xs text-amber-800 leading-relaxed" />
         )}
 
-        <p className="text-[10px] text-amber-600/60 mt-2">{timeLabel}</p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-[10px] text-amber-600/60">{timeLabel}</p>
+          <div className="flex gap-2 sm:hidden">
+            {onEdit && (
+              <button onClick={() => onEdit(card)} className="text-amber-600">
+                <Pencil size={13} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={() => onDelete(card.id)} className="text-red-400">
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        </div>
 
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
           {onEdit && (
             <button onClick={() => onEdit(card)} className="text-amber-600 hover:text-amber-800">
               <Pencil size={14} />
@@ -212,10 +228,24 @@ export function CardItem({ card, onDelete, onEdit }: CardItemProps) {
         {card.content && (
           <ExpandableContent text={card.content} className="text-sm text-gray-600 leading-relaxed" />
         )}
-        <p className="text-xs text-gray-400 mt-2">{timeLabel}</p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-400">{timeLabel}</p>
+          <div className="flex gap-1 sm:hidden">
+            {onEdit && (
+              <button onClick={() => onEdit(card)} className="bg-white rounded-full p-1.5 shadow text-amber-500">
+                <Pencil size={13} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={() => onDelete(card.id)} className="bg-white rounded-full p-1.5 shadow text-red-400">
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
         {onEdit && (
           <button
             onClick={() => onEdit(card)}
