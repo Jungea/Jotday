@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lumia — 나만의 이미지 달력 일기",
+  title: "Jotday — 나만의 이미지 달력 일기",
   description: "소중한 순간을 달력에 기록하세요",
 };
 

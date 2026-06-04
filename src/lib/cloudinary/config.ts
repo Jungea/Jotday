@@ -13,7 +13,7 @@ export async function uploadImage(
   userId: string
 ): Promise<{ url: string; public_id: string }> {
   const result = await cloudinary.uploader.upload(file, {
-    folder: `lumia/${userId}`,
+    folder: `jotday/${userId}`,
     resource_type: "image",
     transformation: [{ quality: "auto", fetch_format: "auto" }],
   });

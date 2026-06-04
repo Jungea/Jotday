@@ -15,6 +15,6 @@ export const useThemeStore = create<ThemeStore>()(
       theme: "card",
       setTheme: (theme) => set({ theme }),
     }),
-    { name: "lumia-theme" }
+    { name: "jotday-theme" }
   )
 );

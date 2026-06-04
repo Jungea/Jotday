@@ -39,7 +39,7 @@ export default function HomePage() {
       {/* Navbar */}
       <nav className={`flex items-center justify-between px-6 py-4 ${isCork ? "bg-amber-800/30" : "bg-white border-b border-gray-100 shadow-sm"}`}>
         <h1 className={`text-xl font-bold tracking-wide ${isCork ? "text-amber-100" : "text-amber-700"}`}>
-          Lumia
+          Jotday
         </h1>
         <div className="flex items-center gap-2">
           <Link

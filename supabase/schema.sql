@@ -1,4 +1,4 @@
--- Lumia Database Schema
+-- Jotday Database Schema
 
 -- Cards table
 CREATE TABLE IF NOT EXISTS cards (

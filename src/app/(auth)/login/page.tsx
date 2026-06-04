@@ -32,7 +32,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100 p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-700">Lumia</h1>
+          <h1 className="text-3xl font-bold text-amber-700">Jotday</h1>
           <p className="text-gray-500 text-sm mt-1">나만의 이미지 달력 일기</p>
         </div>
 
