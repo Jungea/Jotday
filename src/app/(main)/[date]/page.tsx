@@ -64,32 +64,30 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
 
   if (!isValid(parsedDate)) return null;
 
-  const formattedDate = format(parsedDate, "yyyy년 M월 d일 (E)", { locale: ko });
+  const dayLabel  = format(parsedDate, "(E)", { locale: ko });
+  const dateLabel = format(parsedDate, "M월 d일", { locale: ko });
 
   return (
     <div className={`h-dvh flex flex-col overflow-hidden ${isDark ? "theme-dark" : "theme-light"}`}>
       {/* Header */}
-      <header className={`flex items-center gap-3 px-5 py-4 shrink-0 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
+      <header className={`shrink-0 flex items-center gap-3 px-4 py-3 border-b ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200 shadow-sm"}`}>
         <button
           onClick={() => router.back()}
           className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>
-          {formattedDate}
+
+        <span className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
+          {dateLabel}
+          <span className={`ml-1.5 text-sm font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}>{dayLabel}</span>
           {!loading && cards.length > 0 && (
-            <span className={`ml-2 text-sm font-normal ${isDark ? "text-gray-400" : "text-gray-400"}`}>
+            <span className={`ml-2 inline-flex items-center justify-center text-[11px] font-medium px-1.5 py-0.5 rounded-full
+              ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-500"}`}>
               {cards.length}
             </span>
           )}
-        </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className={`ml-auto rounded-full p-2 transition-colors shadow ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
-        >
-          <Plus size={18} />
-        </button>
+        </span>
       </header>
 
       {/* Cards */}
@@ -99,11 +97,9 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
           </div>
         ) : cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <div className="text-5xl">📝</div>
-            <p className={`text-sm ${isDark ? "text-gray-500" : "text-gray-400"}`}>
-              아직 기록이 없어요. + 버튼을 눌러 추가해보세요!
-            </p>
+          <div className="flex flex-col items-center justify-center h-full gap-2">
+            <p className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>아직 기록이 없어요</p>
+            <p className={`text-xs ${isDark ? "text-gray-700" : "text-gray-300"}`}>아래 + 버튼을 눌러 추가해보세요</p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
@@ -115,6 +111,15 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           </div>
         )}
       </main>
+
+      {/* FAB */}
+      <button
+        onClick={() => setShowForm(true)}
+        className={`fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
+          ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
+      >
+        <Plus size={22} />
+      </button>
 
       {showForm && (
         <CardForm
