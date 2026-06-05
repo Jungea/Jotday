@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import {
   format,
+  parse,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
@@ -26,12 +27,19 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 interface CalendarGridProps {
   dayMetas: DayMeta[];
   onMonthChange?: (month: string) => void;
+  initialMonth?: string;
 }
 
-export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
-  const [current, setCurrent] = useState(new Date());
+export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: CalendarGridProps) {
+  const [current, setCurrent] = useState(() =>
+    initialMonth ? parse(initialMonth, "yyyy-MM", new Date()) : new Date()
+  );
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showJump, setShowJump] = useState(false);
+
+  useEffect(() => {
+    if (initialMonth) setCurrent(parse(initialMonth, "yyyy-MM", new Date()));
+  }, [initialMonth]);
 
   const currentYear = current.getFullYear();
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
@@ -94,16 +102,30 @@ export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
         >
           {format(current, "yyyy년 M월", { locale: ko })}
         </button>
-        <button
-          onClick={() => {
-            const next = addMonths(current, 1);
-            setCurrent(next);
-            onMonthChange?.(format(next, "yyyy-MM"));
-          }}
-          className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-600"}`}
-        >
-          <ChevronRight size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          {format(current, "yyyy-MM") !== format(new Date(), "yyyy-MM") && (
+            <button
+              onClick={() => {
+                const today = new Date();
+                setCurrent(today);
+                onMonthChange?.(format(today, "yyyy-MM"));
+              }}
+              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${isDark ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+            >
+              오늘
+            </button>
+          )}
+          <button
+            onClick={() => {
+              const next = addMonths(current, 1);
+              setCurrent(next);
+              onMonthChange?.(format(next, "yyyy-MM"));
+            }}
+            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-600"}`}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Weekday headers */}

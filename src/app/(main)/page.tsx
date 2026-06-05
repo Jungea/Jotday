@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { format, addMonths, subMonths, parse } from "date-fns";
 import { Plus } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { CardForm } from "@/components/cards/CardForm";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
@@ -11,9 +12,17 @@ import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import type { DayMeta } from "@/types";
 
-export default function HomePage() {
+function HomeContent() {
+  const searchParams = useSearchParams();
   const [dayMetas, setDayMetas] = useState<DayMeta[]>([]);
-  const [currentMonth, setCurrentMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [currentMonth, setCurrentMonth] = useState(
+    searchParams.get("month") ?? format(new Date(), "yyyy-MM")
+  );
+
+  useEffect(() => {
+    const month = searchParams.get("month");
+    if (month) setCurrentMonth(month);
+  }, [searchParams]);
   const [loading, setLoading] = useState(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -53,7 +62,7 @@ export default function HomePage() {
           </div>
         ) : (
           <>
-            <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} />
+            <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} initialMonth={currentMonth} />
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
@@ -85,5 +94,13 @@ export default function HomePage() {
         />
       )}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }
