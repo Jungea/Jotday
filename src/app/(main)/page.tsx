@@ -14,10 +14,12 @@ import type { DayMeta } from "@/types";
 export default function HomePage() {
   const [dayMetas, setDayMetas] = useState<DayMeta[]>([]);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [loading, setLoading] = useState(true);
   const theme = useThemeStore((s) => s.theme);
   const router = useRouter();
 
   const fetchMetas = useCallback(async (month: string) => {
+    setLoading(true);
     const base = parse(month, "yyyy-MM", new Date());
     const months = [
       format(subMonths(base, 1), "yyyy-MM"),
@@ -26,6 +28,7 @@ export default function HomePage() {
     ];
     const results = await Promise.all(months.map((m) => fetch(`/api/cards?month=${m}`).then((r) => r.ok ? r.json() : [])));
     setDayMetas(results.flat());
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -64,10 +67,16 @@ export default function HomePage() {
 
       {/* Calendar */}
       <main className="px-4 py-6">
-        <CalendarGrid
-          dayMetas={dayMetas}
-          onMonthChange={setCurrentMonth}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
+          </div>
+        ) : (
+          <CalendarGrid
+            dayMetas={dayMetas}
+            onMonthChange={setCurrentMonth}
+          />
+        )}
       </main>
     </div>
   );

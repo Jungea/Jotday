@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { CardForm } from "@/components/cards/CardForm";
@@ -57,6 +57,13 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
 
   const parsedDate = parseISO(date);
   const isDark = theme === "dark";
+
+  useEffect(() => {
+    if (!isValid(parsedDate)) router.replace("/");
+  }, [parsedDate, router]);
+
+  if (!isValid(parsedDate)) return null;
+
   const formattedDate = format(parsedDate, "yyyy년 M월 d일 (E)", { locale: ko });
 
   return (
