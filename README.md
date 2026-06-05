@@ -6,35 +6,42 @@
 
 - **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS v4
 - **Auth & DB**: Supabase (Row Level Security 적용)
-- **이미지 저장**: Cloudinary (25GB 무료)
-- **상태 관리**: Zustand (테마 persist)
+- **이미지 저장**: Cloudinary
+- **상태 관리**: Zustand + persist
 
 ## 주요 기능
 
-- 월간 달력 뷰 — 기록이 있는 날짜에 썸네일 표시
-- 카드 타입: 이미지 / 텍스트 / 이미지+텍스트 혼합
-- 테마 전환: **Cork** (코르크보드 아날로그) / **Card** (그리드 모던)
-- Supabase SSR 기반 인증 (로그인 / 회원가입)
+- 월간 달력 뷰 — 기록이 있는 날짜에 썸네일 표시, 월 이동 및 오늘 버튼
+- 피드 뷰 — 기간·정렬 필터, 무한 스크롤
+- 카드 타입: 이미지 / 텍스트 / 혼합, 다중 이미지 스와이프·라이트박스
+- 태그 검색 + 전문 검색 — 본문 `#태그` 자동 추출, pg_trgm 인덱스
+- 공유 링크 — 카드 또는 날짜별 공유, 만료 기간 설정
+- 카드 다운로드 — Canvas 렌더링 PNG 저장
+- 테마: 라이트 / 다크
 
 ## 프로젝트 구조
 
 ```
 src/
 ├── app/
-│   ├── (auth)/login, register     # 인증 페이지
+│   ├── (auth)/login               # 인증 페이지
 │   ├── (main)/                    # 인증 필요 영역
 │   │   ├── page.tsx               # 홈 (달력)
 │   │   ├── [date]/page.tsx        # 날짜별 카드 목록
-│   │   └── settings/page.tsx      # 테마 설정
-│   └── api/cards/route.ts         # REST API (GET/POST/DELETE)
+│   │   ├── feed/page.tsx          # 피드
+│   │   ├── search/page.tsx        # 태그·전문 검색
+│   │   ├── settings/page.tsx      # 설정
+│   │   └── links/page.tsx         # 공유 링크 관리
+│   ├── api/cards/route.ts         # 카드 CRUD + 검색
+│   ├── api/share/route.ts         # 공유 토큰 관리
+│   └── share/[token]/page.tsx     # 공개 공유 페이지
 ├── components/
 │   ├── calendar/CalendarGrid.tsx
-│   ├── cards/CardItem.tsx
-│   ├── cards/CardForm.tsx
-│   └── ui/Button, ThemeWrapper
+│   ├── cards/CardItem.tsx, CardForm.tsx, ShareLinkModal.tsx
+│   └── ui/
 ├── lib/supabase/                  # client, server, middleware
 ├── lib/cloudinary/
-├── store/theme.ts
+├── store/                         # theme, cardActions, feedPresets, shareSettings
 └── types/index.ts
 ```
 
@@ -51,9 +58,11 @@ cp .env.local.example .env.local
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
 ```
 
 ### 2. Supabase 스키마 적용

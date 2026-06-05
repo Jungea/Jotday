@@ -1,5 +1,8 @@
 -- Jotday Database Schema
 
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- Cards table
 CREATE TABLE IF NOT EXISTS cards (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -11,21 +14,14 @@ CREATE TABLE IF NOT EXISTS cards (
   image_url TEXT,
   image_public_id TEXT,
   images JSONB DEFAULT '[]'::jsonb,
+  tags TEXT[] DEFAULT '{}',
   is_representative BOOLEAN DEFAULT false NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tags column for search
-ALTER TABLE cards ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
-
--- Index for fast date lookups per user
+-- Indexes
 CREATE INDEX IF NOT EXISTS cards_user_date_idx ON cards(user_id, date);
-
--- Trigram extension for fast ILIKE (full-text) search
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
--- GIN indexes for search performance
 CREATE INDEX IF NOT EXISTS cards_tags_gin_idx ON cards USING GIN (tags);
 CREATE INDEX IF NOT EXISTS cards_content_trgm_idx ON cards USING GIN (content gin_trgm_ops);
 
