@@ -2,12 +2,14 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Link } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { CardForm } from "@/components/cards/CardForm";
+import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import { useThemeStore } from "@/store/theme";
+import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Card } from "@/types";
 
 export default function DayPage({ params }: { params: Promise<{ date: string }> }) {
@@ -17,7 +19,9 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const [showForm, setShowForm] = useState(false);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
   const theme = useThemeStore((s) => s.theme);
+  const expiryDays = useShareSettingsStore((s) => s.expiryDays);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
@@ -55,6 +59,18 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     setEditCard(card);
   }
 
+  async function handleShareDate() {
+    const res = await fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date, expires_in_days: expiryDays }),
+    });
+    if (!res.ok) return;
+    const { token, expires_at } = await res.json();
+    const url = `${window.location.origin}/share/${token}`;
+    setShareLinkModal({ url, expiresAt: expires_at });
+  }
+
   const parsedDate = parseISO(date);
   const isDark = theme === "dark";
 
@@ -78,7 +94,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           <ArrowLeft size={20} />
         </button>
 
-        <span className={`text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
+        <span className={`flex-1 text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
           {dateLabel}
           <span className={`ml-1.5 text-sm font-normal ${isDark ? "text-gray-500" : "text-gray-400"}`}>{dayLabel}</span>
           {!loading && cards.length > 0 && (
@@ -88,6 +104,13 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
             </span>
           )}
         </span>
+
+        <button
+          onClick={handleShareDate}
+          className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+        >
+          <Link size={18} />
+        </button>
       </header>
 
       {/* Cards */}
@@ -141,6 +164,15 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
             fetchCards();
           }}
           onCancel={() => setEditCard(null)}
+        />
+      )}
+
+      {shareLinkModal && (
+        <ShareLinkModal
+          url={shareLinkModal.url}
+          expiresAt={shareLinkModal.expiresAt}
+          onClose={() => setShareLinkModal(null)}
+          isDark={isDark}
         />
       )}
     </div>

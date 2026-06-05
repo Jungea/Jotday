@@ -50,4 +50,20 @@ CREATE TRIGGER cards_updated_at
   BEFORE UPDATE ON cards
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- Share tokens table
+CREATE TABLE IF NOT EXISTS share_tokens (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  card_id UUID REFERENCES cards(id) ON DELETE CASCADE,
+  date DATE,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
+CREATE INDEX IF NOT EXISTS share_tokens_token_idx ON share_tokens(token);
+
+ALTER TABLE share_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own share tokens" ON share_tokens
+  FOR ALL USING (auth.uid() = user_id);

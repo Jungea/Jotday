@@ -32,8 +32,10 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/register");
+  const isPublicPage = request.nextUrl.pathname.startsWith("/share/") ||
+    (request.nextUrl.pathname === "/api/share" && request.method === "GET");
 
-  if (error?.code === "refresh_token_not_found" && !isAuthPage) {
+  if (error?.code === "refresh_token_not_found" && !isAuthPage && !isPublicPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     const redirectResponse = NextResponse.redirect(url);
@@ -44,7 +46,7 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse;
   }
 
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isPublicPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
