@@ -27,10 +27,22 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/register");
+
+  if (error?.code === "refresh_token_not_found" && !isAuthPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    const redirectResponse = NextResponse.redirect(url);
+    request.cookies
+      .getAll()
+      .filter((c) => c.name.startsWith("sb-"))
+      .forEach((c) => redirectResponse.cookies.delete(c.name));
+    return redirectResponse;
+  }
 
   if (!user && !isAuthPage) {
     const url = request.nextUrl.clone();
