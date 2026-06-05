@@ -15,6 +15,7 @@ export default function HomePage() {
   const [dayMetas, setDayMetas] = useState<DayMeta[]>([]);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), "yyyy-MM"));
   const [loading, setLoading] = useState(true);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const today = format(new Date(), "yyyy-MM-dd");
   const { showHeader, onScroll } = useScrollHeader();
@@ -31,6 +32,7 @@ export default function HomePage() {
     const results = await Promise.all(months.map((m) => fetch(`/api/cards?month=${m}`).then((r) => r.ok ? r.json() : [])));
     setDayMetas(results.flat());
     setLoading(false);
+    setInitialLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -45,11 +47,19 @@ export default function HomePage() {
 
       {/* Calendar */}
       <main className="flex-1 overflow-y-auto px-4 py-6 relative" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
-        <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} />
-        {loading && (
+        {!initialLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
           </div>
+        ) : (
+          <>
+            <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} />
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
+              </div>
+            )}
+          </>
         )}
       </main>
 
