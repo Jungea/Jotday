@@ -1,85 +1,102 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import type { Metadata } from "next";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
-import { CardItem } from "@/components/cards/CardItem";
-import { Logo } from "@/components/Logo";
-import { useThemeStore } from "@/store/theme";
-import type { Card } from "@/types";
+import { createAdminClient } from "@/lib/supabase/admin";
+import ShareClient from "./ShareClient";
 
-type ShareData =
-  | { type: "card"; card: Card; expires_at: string | null }
-  | { type: "date"; date: string; cards: Card[]; expires_at: string | null };
+type Props = { params: Promise<{ token: string }> };
+
+async function fetchShareData(token: string) {
+  const admin = createAdminClient();
+
+  const { data: tokenRow } = await admin
+    .from("share_tokens")
+    .select("*")
+    .eq("token", token)
+    .single();
+
+  if (!tokenRow) return null;
+  if (tokenRow.expires_at && new Date(tokenRow.expires_at) < new Date()) return null;
+
+  if (tokenRow.card_id) {
+    const { data: card } = await admin.from("cards").select("*").eq("id", tokenRow.card_id).single();
+    if (!card) return null;
+    return { type: "card" as const, card, expires_at: tokenRow.expires_at };
+  }
+
+  if (tokenRow.date) {
+    const { data: cards } = await admin
+      .from("cards")
+      .select("*")
+      .eq("user_id", tokenRow.user_id)
+      .eq("date", tokenRow.date)
+      .order("created_at", { ascending: true });
+    return { type: "date" as const, date: tokenRow.date, cards: cards ?? [], expires_at: tokenRow.expires_at };
+  }
+
+  return null;
+}
+
+function getImageUrl(data: Awaited<ReturnType<typeof fetchShareData>>): string | null {
+  if (!data) return null;
+  if (data.type === "card") {
+    const { card } = data;
+    return card.images?.[0]?.url ?? card.image_url ?? null;
+  }
+  const repCard = data.cards.find((c) => c.is_representative) ?? data.cards[0];
+  if (!repCard) return null;
+  return repCard.images?.[0]?.url ?? repCard.image_url ?? null;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { token } = await params;
+  const data = await fetchShareData(token);
+
+  if (!data) {
+    return { title: "Jotday", description: "링크가 만료되었거나 존재하지 않습니다." };
+  }
+
+  const dateLabel =
+    data.type === "date"
+      ? format(parseISO(data.date), "yyyy년 M월 d일 (E)", { locale: ko })
+      : format(parseISO(data.card.date), "yyyy년 M월 d일 (E)", { locale: ko });
+
+  const title =
+    data.type === "card"
+      ? dateLabel
+      : `${dateLabel} — ${data.cards.length}개의 기록`;
+
+  const description =
+    data.type === "card"
+      ? (data.card.content?.slice(0, 120) || null)
+      : data.cards
+          .map((c) => c.content)
+          .filter(Boolean)
+          .join(" · ")
+          .slice(0, 120) || null;
+
+  const imageUrl = getImageUrl(data);
+
+  return {
+    title: `${title} | Jotday`,
+    ...(description && { description }),
+    openGraph: {
+      title: `${title} | Jotday`,
+      ...(description && { description }),
+      type: "website",
+      ...(imageUrl && {
+        images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
+      }),
+    },
+    twitter: {
+      card: imageUrl ? "summary_large_image" : "summary",
+      title: `${title} | Jotday`,
+      ...(description && { description }),
+      ...(imageUrl && { images: [imageUrl] }),
+    },
+  };
+}
 
 export default function SharePage() {
-  const { token } = useParams<{ token: string }>();
-  const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
-  const [data, setData] = useState<ShareData | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`/api/share?token=${token}`)
-      .then(async (res) => {
-        if (!res.ok) { setNotFound(true); return; }
-        setData(await res.json());
-      })
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  const expiryLabel = data?.expires_at
-    ? `이 링크는 ${format(parseISO(data.expires_at), "yyyy.MM.dd")}까지 유효합니다`
-    : "만료 없음";
-
-  const dateLabel = data?.type === "date"
-    ? format(parseISO(data.date), "yyyy년 M월 d일 (E)", { locale: ko })
-    : data?.type === "card"
-      ? format(parseISO(data.card.date), "yyyy년 M월 d일 (E)", { locale: ko })
-      : "";
-
-  return (
-    <div className={`min-h-dvh flex flex-col ${isDark ? "theme-dark bg-[#111] text-white" : "theme-light bg-gray-50 text-gray-900"}`}>
-      <header className={`shrink-0 flex items-center justify-between px-4 py-3 border-b ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200 shadow-sm"}`}>
-        <Logo height={32} className={isDark ? "text-white" : "text-gray-900"} />
-        {dateLabel && (
-          <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{dateLabel}</span>
-        )}
-      </header>
-
-      <main className="flex-1 flex flex-col">
-        {loading ? (
-          <div className="flex items-center justify-center flex-1 py-20">
-            <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
-          </div>
-        ) : notFound ? (
-          <div className="flex items-center justify-center flex-1 py-20">
-            <p className={`text-sm ${isDark ? "text-gray-500" : "text-gray-400"}`}>링크가 만료되었거나 존재하지 않습니다</p>
-          </div>
-        ) : data?.type === "card" ? (
-          <div className="flex flex-col items-center gap-4 py-4 px-4">
-            <div className="w-full max-w-sm">
-              <CardItem card={data.card} isDark={isDark} shareView={true} />
-            </div>
-          </div>
-        ) : data?.type === "date" ? (
-          <div className="flex flex-col items-center gap-4 py-4 px-4">
-            {data.cards.map((card) => (
-              <div key={card.id} className="w-full max-w-sm">
-                <CardItem card={card} isDark={isDark} shareView={true} />
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </main>
-
-      {!loading && !notFound && data && (
-        <footer className={`shrink-0 text-center py-4 text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>
-          {expiryLabel}
-        </footer>
-      )}
-    </div>
-  );
+  return <ShareClient />;
 }
