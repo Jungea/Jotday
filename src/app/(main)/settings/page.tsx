@@ -109,7 +109,8 @@ export default function SettingsPage() {
     <div className={`h-dvh flex flex-col ${isDark ? "theme-dark" : "theme-light"}`}>
       <CollapsingHeader show={showHeader} />
 
-      <main className="flex-1 overflow-y-auto p-6 max-w-md mx-auto space-y-8 w-full" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
+      <main className="flex-1 overflow-y-auto" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
+        <div className="p-6 max-w-md mx-auto space-y-8">
         {/* 테마 */}
         <section>
           <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>테마</h2>
@@ -168,6 +169,7 @@ export default function SettingsPage() {
             <span className="text-sm font-medium">로그아웃</span>
           </button>
         </section>
+        </div>
       </main>
 
       <BottomTabBar />
