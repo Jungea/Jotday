@@ -81,7 +81,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   if (!isValid(parsedDate)) return null;
 
   const dayLabel  = format(parsedDate, "(E)", { locale: ko });
-  const dateLabel = format(parsedDate, "M월 d일", { locale: ko });
+  const dateLabel = format(parsedDate, "yyyy년 M월 d일", { locale: ko });
 
   return (
     <div className={`h-dvh flex flex-col overflow-hidden ${isDark ? "theme-dark" : "theme-light"}`}>
