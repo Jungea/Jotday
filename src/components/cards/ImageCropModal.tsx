@@ -49,14 +49,8 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     rafRef.current = requestAnimationFrame(() => setTick((n) => n + 1));
   }
 
-  function clamp(px: number, py: number, s: number) {
-    const { x: fx, y: fy, w: fw, h: fh } = cropRef.current;
-    const { w: nw, h: nh } = naturalRef.current;
-    if (!nw) return { x: px, y: py };
-    return {
-      x: Math.min(fx + (nw * s) / 2, Math.max(fx + fw - (nw * s) / 2, px)),
-      y: Math.min(fy + (nh * s) / 2, Math.max(fy + fh - (nh * s) / 2, py)),
-    };
+  function clamp(px: number, py: number, _s: number) {
+    return { x: px, y: py };
   }
 
   function handleLoad() {
@@ -66,10 +60,12 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     if (!nw || !nh) return;
     naturalRef.current = { w: nw, h: nh };
     const { w: cw, h: ch } = cropRef.current;
+    // 초기 스케일: 크롭 영역에 꽉 차게
     const s = Math.max(cw / nw, ch / nh);
-    minScaleRef.current = s;
+    // 최소 스케일: 이미지가 크롭 영역 안에 들어오는 크기
+    minScaleRef.current = Math.min(cw / nw, ch / nh) * 0.5;
     scaleRef.current = s;
-    posRef.current = clamp(posRef.current.x, posRef.current.y, s);
+    posRef.current = { x: posRef.current.x, y: posRef.current.y };
     requestRender();
   }
 
@@ -177,6 +173,8 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     canvas.height = 1350;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, 1080, 1350);
     ctx.drawImage(img, (fx - imageLeft) / s, (fy - imageTop) / s, fw / s, fh / s, 0, 0, 1080, 1350);
     canvas.toBlob((blob) => {
       if (!blob) return;
@@ -215,6 +213,8 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
           top: imageTop,
           width: nw > 0 ? nw * s : 0,
           height: nh > 0 ? nh * s : 0,
+          maxWidth: "none",
+          maxHeight: "none",
           userSelect: "none",
           pointerEvents: "none",
         }}
