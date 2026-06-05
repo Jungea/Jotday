@@ -39,6 +39,16 @@ export function DateRangePicker({ from, to, onChange, isDark }: Props) {
   const [picking, setPicking] = useState<Picking>("range");
   const [month, setMonth] = useState(toDate(from) ?? new Date());
   const [hovered, setHovered] = useState<Date | null>(null);
+  const [showJump, setShowJump] = useState(false);
+
+  const currentYear = month.getFullYear();
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  function handleJump(year: number, m: number) {
+    setMonth(new Date(year, m - 1, 1));
+    setShowJump(false);
+  }
 
   const fromDate = toDate(from);
   const toDate_ = toDate(to);
@@ -47,6 +57,7 @@ export function DateRangePicker({ from, to, onChange, isDark }: Props) {
   function openAs(mode: Picking, anchor?: Date) {
     setPicking(mode);
     if (anchor) setMonth(anchor);
+    setShowJump(false);
     setOpen(true);
   }
 
@@ -135,13 +146,13 @@ export function DateRangePicker({ from, to, onChange, isDark }: Props) {
       {/* Bottom sheet */}
       {open && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-black/50" onClick={() => { setOpen(false); setShowJump(false); }} />
 
           <div className={`relative rounded-t-2xl px-5 pt-4 pb-10 ${c.bg}`}>
             {/* Handle */}
             <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mb-4" />
 
-            {/* Month nav + 재설정 */}
+            {/* Month nav */}
             <div className={`flex items-center justify-between mb-4 ${c.text}`}>
               <button
                 onClick={() => setMonth(subMonths(month, 1))}
@@ -149,9 +160,12 @@ export function DateRangePicker({ from, to, onChange, isDark }: Props) {
               >
                 <ChevronLeft size={18} />
               </button>
-              <span className="text-sm font-semibold">
+              <button
+                onClick={() => setShowJump(true)}
+                className={`text-sm font-semibold px-2 py-1 rounded-lg transition-colors ${c.nav}`}
+              >
                 {format(month, "yyyy년 M월", { locale: ko })}
-              </span>
+              </button>
               <button
                 onClick={() => setMonth(addMonths(month, 1))}
                 className={`p-1.5 rounded-full ${c.nav} transition-colors`}
@@ -160,67 +174,107 @@ export function DateRangePicker({ from, to, onChange, isDark }: Props) {
               </button>
             </div>
 
-            {/* 안내 문구 */}
-            <p className={`text-xs text-center mb-3 ${c.sub}`}>
-              {picking === "start" ? "시작일을 선택하세요"
-                : picking === "end" ? "종료일을 선택하세요"
-                : !fromDate ? "시작일을 선택하세요"
-                : !toDate_ ? "종료일을 선택하세요"
-                : "날짜를 선택하세요"}
-            </p>
-
-            {/* Weekdays */}
-            <div className="grid grid-cols-7 mb-1">
-              {WEEKDAYS.map((d) => (
-                <div key={d} className={`text-center text-xs py-1 ${c.sub}`}>{d}</div>
-              ))}
-            </div>
-
-            {/* Days */}
-            <div className="grid grid-cols-7">
-              {grid.map((day, i) => {
-                if (!day) return <div key={i} />;
-                const edge = isEdge(day);
-                const inRange = isInRange(day);
-                const start = isStart(day);
-                const end = isEnd(day);
-
-                return (
-                  <div
-                    key={i}
-                    className="relative flex items-center justify-center h-10"
-                    onMouseEnter={() => picking === "range" && !toDate_ && setHovered(day)}
-                    onMouseLeave={() => setHovered(null)}
-                  >
-                    {inRange && !edge && (
-                      <div className={`absolute inset-y-1 left-0 right-0 ${c.range}`} />
-                    )}
-                    {start && toDate_ && (
-                      <div className={`absolute inset-y-1 left-1/2 right-0 ${c.range}`} />
-                    )}
-                    {end && fromDate && !isSameDay(fromDate, day) && (
-                      <div className={`absolute inset-y-1 left-0 right-1/2 ${c.range}`} />
-                    )}
+            {showJump ? (
+              <>
+                {/* 연도 선택 */}
+                <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none mb-4">
+                  {years.map((y) => (
                     <button
-                      onClick={() => handleDay(day)}
-                      className={`relative z-10 w-9 h-9 rounded-full text-sm font-medium transition-colors
-                        ${edge ? c.edge : `${c.text} ${c.hover}`}`}
+                      key={y}
+                      onClick={() => handleJump(y, month.getMonth() + 1)}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                        ${y === currentYear
+                          ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
+                          : isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-600"
+                        }`}
                     >
-                      {format(day, "d")}
+                      {y}
                     </button>
-                  </div>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
 
-            {/* 재설정 */}
-            {hasRange && (
-              <button
-                onClick={handleReset}
-                className={`mt-4 w-full py-2 rounded-xl text-sm transition-colors ${c.sub} ${c.nav}`}
-              >
-                재설정
-              </button>
+                {/* 월 선택 */}
+                <div className="grid grid-cols-4 gap-2">
+                  {months.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => handleJump(currentYear, m)}
+                      className={`py-2.5 rounded-xl text-sm font-medium transition-colors
+                        ${m === month.getMonth() + 1
+                          ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
+                          : isDark ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                    >
+                      {m}월
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* 안내 문구 */}
+                <p className={`text-xs text-center mb-3 ${c.sub}`}>
+                  {picking === "start" ? "시작일을 선택하세요"
+                    : picking === "end" ? "종료일을 선택하세요"
+                    : !fromDate ? "시작일을 선택하세요"
+                    : !toDate_ ? "종료일을 선택하세요"
+                    : "날짜를 선택하세요"}
+                </p>
+
+                {/* Weekdays */}
+                <div className="grid grid-cols-7 mb-1">
+                  {WEEKDAYS.map((d) => (
+                    <div key={d} className={`text-center text-xs py-1 ${c.sub}`}>{d}</div>
+                  ))}
+                </div>
+
+                {/* Days */}
+                <div className="grid grid-cols-7">
+                  {grid.map((day, i) => {
+                    if (!day) return <div key={i} />;
+                    const edge = isEdge(day);
+                    const inRange = isInRange(day);
+                    const start = isStart(day);
+                    const end = isEnd(day);
+
+                    return (
+                      <div
+                        key={i}
+                        className="relative flex items-center justify-center h-10"
+                        onMouseEnter={() => picking === "range" && !toDate_ && setHovered(day)}
+                        onMouseLeave={() => setHovered(null)}
+                      >
+                        {inRange && !edge && (
+                          <div className={`absolute inset-y-1 left-0 right-0 ${c.range}`} />
+                        )}
+                        {start && toDate_ && (
+                          <div className={`absolute inset-y-1 left-1/2 right-0 ${c.range}`} />
+                        )}
+                        {end && fromDate && !isSameDay(fromDate, day) && (
+                          <div className={`absolute inset-y-1 left-0 right-1/2 ${c.range}`} />
+                        )}
+                        <button
+                          onClick={() => handleDay(day)}
+                          className={`relative z-10 w-9 h-9 rounded-full text-sm font-medium transition-colors
+                            ${edge ? c.edge : `${c.text} ${c.hover}`}`}
+                        >
+                          {format(day, "d")}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 재설정 */}
+                {hasRange && (
+                  <button
+                    onClick={handleReset}
+                    className={`mt-4 w-full py-2 rounded-xl text-sm transition-colors ${c.sub} ${c.nav}`}
+                  >
+                    재설정
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

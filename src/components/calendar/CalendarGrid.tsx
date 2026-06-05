@@ -31,6 +31,18 @@ interface CalendarGridProps {
 export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
   const [current, setCurrent] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [showJump, setShowJump] = useState(false);
+
+  const currentYear = current.getFullYear();
+  const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  function handleJump(year: number, month: number) {
+    const next = new Date(year, month - 1, 1);
+    setCurrent(next);
+    onMonthChange?.(format(next, "yyyy-MM"));
+    setShowJump(false);
+  }
   const router = useRouter();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === "dark";
@@ -76,9 +88,12 @@ export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
         >
           <ChevronLeft size={20} />
         </button>
-        <h2 className={`text-xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+        <button
+          onClick={() => setShowJump(true)}
+          className={`text-xl font-bold px-2 py-1 rounded-lg transition-colors ${isDark ? "text-white hover:bg-gray-800" : "text-gray-900 hover:bg-gray-100"}`}
+        >
           {format(current, "yyyy년 M월", { locale: ko })}
-        </h2>
+        </button>
         <button
           onClick={() => {
             const next = addMonths(current, 1);
@@ -153,6 +168,50 @@ export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
           />
         ))}
       </div>
+
+      {/* 연도/월 빠른 점프 */}
+      {showJump && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowJump(false)} />
+          <div className={`relative rounded-t-2xl px-5 pt-4 pb-10 ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
+            <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mb-5" />
+
+            {/* 연도 선택 */}
+            <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none mb-4">
+              {years.map((y) => (
+                <button
+                  key={y}
+                  onClick={() => handleJump(y, current.getMonth() + 1)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                    ${y === currentYear
+                      ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
+                      : isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-600"
+                    }`}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+
+            {/* 월 선택 */}
+            <div className="grid grid-cols-4 gap-2">
+              {months.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => handleJump(currentYear, m)}
+                  className={`py-2.5 rounded-xl text-sm font-medium transition-colors
+                    ${m === current.getMonth() + 1
+                      ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
+                      : isDark ? "bg-gray-800 text-gray-300 hover:bg-gray-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                >
+                  {m}월
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 모바일 바텀 시트 */}
       {selectedDay && (
