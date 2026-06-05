@@ -18,7 +18,7 @@ interface CardItemProps {
   shareView?: boolean;
 }
 
-function useSwipe(count: number) {
+function useSwipe(count: number, onTap?: () => void) {
   const [index, setIndex] = useState(0);
   const startX = useRef<number | null>(null);
   const isDragging = useRef(false);
@@ -34,6 +34,8 @@ function useSwipe(count: number) {
     const dx = e.clientX - startX.current;
     if (Math.abs(dx) > 40) {
       setIndex((i) => dx < 0 ? Math.min(i + 1, count - 1) : Math.max(i - 1, 0));
+    } else {
+      onTap?.();
     }
     startX.current = null;
   }
@@ -84,38 +86,22 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Touch gestures
-  const lastTouch = useRef({ x: 0, y: 0 });
+  // Pinch zoom (touch events only)
   const lastPinchDist = useRef(0);
-  const swipeStartX = useRef(0);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     function onTouchStart(e: TouchEvent) {
-      if ((e.target as HTMLElement).closest("button")) return;
-      e.preventDefault();
-      if (e.touches.length === 1) {
-        lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        swipeStartX.current = e.touches[0].clientX;
-      } else if (e.touches.length >= 2) {
+      if (e.touches.length >= 2) {
         lastPinchDist.current = touchDist(e.touches);
       }
     }
 
     function onTouchMove(e: TouchEvent) {
-      if ((e.target as HTMLElement).closest("button")) return;
-      e.preventDefault();
-      if (e.touches.length === 1) {
-        const dx = e.touches[0].clientX - lastTouch.current.x;
-        const dy = e.touches[0].clientY - lastTouch.current.y;
-        lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        if (scaleRef.current > 1) {
-          posRef.current = { x: posRef.current.x + dx, y: posRef.current.y + dy };
-          requestRender();
-        }
-      } else if (e.touches.length >= 2) {
+      if (e.touches.length >= 2) {
+        e.preventDefault();
         const d = touchDist(e.touches);
         const mid = touchMid(e.touches);
         const ratio = d / lastPinchDist.current;
@@ -129,30 +115,13 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
       }
     }
 
-    function onTouchEnd(e: TouchEvent) {
-      if (scaleRef.current <= 1 && e.changedTouches.length === 1) {
-        const dx = e.changedTouches[0].clientX - swipeStartX.current;
-        if (Math.abs(dx) > 50) {
-          setIndex((i) => {
-            const next = dx < 0 ? Math.min(i + 1, images.length - 1) : Math.max(i - 1, 0);
-            if (next !== i) { scaleRef.current = 1; posRef.current = { x: 0, y: 0 }; }
-            return next;
-          });
-          requestRender();
-        }
-      }
-      if (scaleRef.current < 1) resetTransform();
-    }
-
-    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd);
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
     };
-  }, [images.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mouse wheel zoom
   useEffect(() => {
@@ -176,87 +145,129 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Mouse drag
-  const isDragging = useRef(false);
-  const lastMouse = useRef({ x: 0, y: 0 });
+  // Pointer events: swipe (scale=1) + drag (scale>1) + double-tap
+  const ptrDown = useRef(false);
+  const ptrStartX = useRef(0);
+  const ptrStartY = useRef(0);
+  const ptrLastX = useRef(0);
+  const ptrLastY = useRef(0);
+  const lastTapTime = useRef(0);
+  const dragXRef = useRef(0);
+  const withSlideTransition = useRef(false);
 
-  function onMouseDown(e: React.MouseEvent) {
-    if (scaleRef.current <= 1) return;
-    isDragging.current = true;
-    lastMouse.current = { x: e.clientX, y: e.clientY };
+  function onPointerDown(e: React.PointerEvent) {
+    if (!e.isPrimary) return;
+    ptrDown.current = true;
+    withSlideTransition.current = false;
+    ptrStartX.current = e.clientX;
+    ptrStartY.current = e.clientY;
+    ptrLastX.current = e.clientX;
+    ptrLastY.current = e.clientY;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
-  function onMouseMove(e: React.MouseEvent) {
-    if (!isDragging.current) return;
-    posRef.current = {
-      x: posRef.current.x + e.clientX - lastMouse.current.x,
-      y: posRef.current.y + e.clientY - lastMouse.current.y,
-    };
-    lastMouse.current = { x: e.clientX, y: e.clientY };
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (!ptrDown.current || !e.isPrimary) return;
+    if (scaleRef.current > 1) {
+      posRef.current = {
+        x: posRef.current.x + e.clientX - ptrLastX.current,
+        y: posRef.current.y + e.clientY - ptrLastY.current,
+      };
+    } else {
+      dragXRef.current = e.clientX - ptrStartX.current;
+    }
+    ptrLastX.current = e.clientX;
+    ptrLastY.current = e.clientY;
     requestRender();
   }
-  function onMouseUp() { isDragging.current = false; }
 
-  // Double-tap/click to zoom
-  const lastTapTime = useRef(0);
-  function onTap(e: React.MouseEvent) {
-    if (e.type === "click" && isDragging.current) return;
-    const now = Date.now();
-    if (now - lastTapTime.current < 300) {
-      if (scaleRef.current > 1) {
-        resetTransform();
-      } else {
-        scaleRef.current = 2.5;
-        posRef.current = { x: 0, y: 0 };
-        requestRender();
+  function onPointerUp(e: React.PointerEvent) {
+    if (!ptrDown.current || !e.isPrimary) return;
+    ptrDown.current = false;
+    const dx = e.clientX - ptrStartX.current;
+    const dy = e.clientY - ptrStartY.current;
+    dragXRef.current = 0;
+    withSlideTransition.current = true;
+
+    if (scaleRef.current <= 1 && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      // 스와이프
+      setIndex((i) => {
+        const next = dx < 0 ? Math.min(i + 1, images.length - 1) : Math.max(i - 1, 0);
+        if (next !== i) { scaleRef.current = 1; posRef.current = { x: 0, y: 0 }; }
+        return next;
+      });
+    } else if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
+      // 더블탭 줌
+      const now = Date.now();
+      if (now - lastTapTime.current < 300) {
+        if (scaleRef.current > 1) resetTransform();
+        else { scaleRef.current = 2.5; requestRender(); }
       }
+      lastTapTime.current = now;
     }
-    lastTapTime.current = now;
+    requestRender();
   }
 
   const s = scaleRef.current;
   const { x, y } = posRef.current;
+  const dragX = dragXRef.current;
+  const slideTransition = withSlideTransition.current;
 
   return (
     <div className="fixed inset-0 z-[70] bg-black select-none" style={{ touchAction: "none" }}>
       <div
         ref={containerRef}
-        className="w-full h-full flex items-center justify-center overflow-hidden"
-        style={{ cursor: s > 1 ? "grab" : "zoom-in" }}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        onClick={onTap}
+        className="w-full h-full overflow-hidden"
+        style={{ cursor: s > 1 ? "grab" : "default", touchAction: "none" }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={images[index].url}
-          alt=""
-          draggable={false}
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100dvh",
-            objectFit: "contain",
-            transform: `translate(${x}px, ${y}px) scale(${s})`,
-            transformOrigin: "center center",
-            transition: s === 1 ? "transform 0.2s" : "none",
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
-        />
+        {images.map((img, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <div
+            key={i}
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              transform: `translateX(calc(${(i - index) * 100}% + ${dragX}px))`,
+              transition: slideTransition && dragX === 0 ? "transform 0.3s ease" : "none",
+            }}
+          >
+            <img
+              src={img.url}
+              alt=""
+              draggable={false}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100dvh",
+                objectFit: "contain",
+                transform: i === index ? `translate(${x}px, ${y}px) scale(${s})` : "none",
+                transition: i === index && s === 1 && dragX === 0 ? "transform 0.2s" : "none",
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            />
+          </div>
+        ))}
       </div>
 
       {/* 이미지 전환 인디케이터 */}
       {images.length > 1 && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              className={`w-2 h-2 rounded-full transition-colors pointer-events-auto ${i === index ? "bg-white" : "bg-white/40"}`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); goTo(i); }}
-            />
-          ))}
+        <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-1.5 pointer-events-none">
+          <span className="bg-black/50 text-white text-[11px] tabular-nums leading-none px-2 py-0.5 rounded-full">
+            {index + 1} / {images.length}
+          </span>
+          <div className="flex gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                className={`w-2 h-2 rounded-full transition-colors pointer-events-auto ${i === index ? "bg-white" : "bg-white/40"}`}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); goTo(i); }}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -278,6 +289,7 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
         </button>
       )}
 
+
       <button
         className="absolute top-5 right-5 text-white/70 hover:text-white z-10"
         onClick={onClose}
@@ -289,15 +301,15 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
 }
 
 function ImageSwiper({ images }: { images: { url: string }[] }) {
-  const { index, setIndex, onPointerDown, onPointerUp, onPointerLeave } = useSwipe(images.length);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const { index, setIndex, onPointerDown, onPointerUp, onPointerLeave } = useSwipe(images.length, () => setLightboxIndex(index));
 
   if (images.length === 0) return null;
   if (images.length === 1) {
     return (
       <>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[0].url} alt="" className="w-full h-auto cursor-zoom-in" onClick={() => setLightboxIndex(0)} />
+        <img src={images[0].url} alt="" className="w-full h-auto cursor-pointer" onClick={() => setLightboxIndex(0)} />
         {lightboxIndex !== null && <Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
       </>
     );
@@ -306,7 +318,7 @@ function ImageSwiper({ images }: { images: { url: string }[] }) {
   return (
     <>
       <div
-        className="relative overflow-hidden cursor-grab active:cursor-grabbing select-none"
+        className="relative overflow-hidden cursor-pointer select-none"
         style={{ touchAction: "pan-y" }}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
@@ -331,22 +343,21 @@ function ImageSwiper({ images }: { images: { url: string }[] }) {
             />
           ))}
         </div>
-        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => setIndex(i)}
-              className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-white" : "bg-white/50"}`}
-            />
-          ))}
+        <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-1.5">
+          <span className="bg-black/50 text-white text-[11px] tabular-nums leading-none px-2 py-0.5 rounded-full">
+            {index + 1} / {images.length}
+          </span>
+          <div className="flex gap-1.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => setIndex(i)}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === index ? "bg-white" : "bg-white/50"}`}
+              />
+            ))}
+          </div>
         </div>
-        <button
-          className="absolute inset-0 w-full h-full"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => setLightboxIndex(index)}
-          aria-label="전체화면으로 보기"
-        />
       </div>
       {lightboxIndex !== null && <Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
     </>
@@ -594,12 +605,16 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
   return (
     <>
       <div className={`rounded-xl ${repGlow}`}>
-      <div className={`relative rounded-xl overflow-hidden group ${
+      <div className={`relative rounded-xl group ${
         isDark
           ? "bg-[#1c1c1c] border border-gray-800 shadow-none"
           : "bg-white shadow-sm border border-gray-200"
       }`}>
-        {images.length > 0 && <ImageSwiper images={images} />}
+        {images.length > 0 && (
+          <div className={`overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
+            <ImageSwiper images={images} />
+          </div>
+        )}
         <div className="p-4">
           {card.content && (
             <ExpandableContent
