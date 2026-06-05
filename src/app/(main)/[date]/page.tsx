@@ -91,7 +91,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       </header>
 
       {/* Cards */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-24">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
