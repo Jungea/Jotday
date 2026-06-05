@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, Pencil, Star, Download, Link, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
@@ -553,7 +554,29 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
   );
 }
 
-function ExpandableContent({ text, className }: { text: string; className: string }) {
+function HighlightedText({ text, isDark }: { text: string; isDark: boolean }) {
+  const router = useRouter();
+  const parts = text.split(/(#[^\s#]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith("#") ? (
+          <span
+            key={i}
+            className={`cursor-pointer hover:underline ${isDark ? "text-gray-400" : "text-gray-500"}`}
+            onClick={(e) => { e.stopPropagation(); router.push(`/search?tags=${part.slice(1).toLowerCase()}`); }}
+          >
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+function ExpandableContent({ text, className, isDark }: { text: string; className: string; isDark: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
@@ -567,7 +590,7 @@ function ExpandableContent({ text, className }: { text: string; className: strin
   return (
     <div>
       <p ref={ref} className={`${className} whitespace-pre-wrap ${expanded ? "" : "line-clamp-3"}`}>
-        {text}
+        <HighlightedText text={text} isDark={isDark} />
       </p>
       {(clamped || expanded) && (
         <button onClick={() => setExpanded((v) => !v)} className="text-xs text-gray-400 mt-1">
@@ -655,16 +678,8 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
             <ExpandableContent
               text={card.content}
               className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
+              isDark={isDark}
             />
-          )}
-          {(card.tags ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {(card.tags ?? []).map((tag) => (
-                <span key={tag} className={`text-[11px] px-2 py-0.5 rounded-full ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-500"}`}>
-                  #{tag}
-                </span>
-              ))}
-            </div>
           )}
           <div className="flex items-center justify-between mt-2">
             <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>

@@ -197,13 +197,13 @@ function SearchContent() {
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(tagInput); }
+              if (e.key === "Enter" || e.key === "," || e.key === " ") { e.preventDefault(); addTag(tagInput); }
               else if (e.key === "Backspace" && !tagInput && activeTags.length > 0)
                 setActiveTags((prev) => prev.slice(0, -1));
             }}
             onBlur={() => { if (tagInput) addTag(tagInput); }}
             placeholder={activeTags.length === 0 ? "태그 입력 후 Enter" : ""}
-            className={`text-xs bg-transparent outline-none min-w-[80px] ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
+            className={`flex-1 text-xs bg-transparent outline-none min-w-[80px] ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
           />
         </div>
       </div>

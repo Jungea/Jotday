@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef } from "react";
 import type { DragEvent } from "react";
 import { format } from "date-fns";
-import { X, Upload, Camera, Hash } from "lucide-react";
+import { X, Upload, Camera } from "lucide-react";
+
+function extractTags(text: string): string[] {
+  const matches = text.match(/#([^\s#]+)/g) ?? [];
+  return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
+}
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { useThemeStore } from "@/store/theme";
@@ -35,8 +40,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const isDark = useThemeStore((s) => s.theme === "dark");
   const cardType = "mixed";
   const [content, setContent] = useState(editCard?.content ?? "");
-  const [tags, setTags] = useState<string[]>(editCard?.tags ?? []);
-  const [tagInput, setTagInput] = useState("");
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
   const [manualTime, setManualTime] = useState(false);
 
@@ -105,21 +108,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setSlots((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function addTag(raw: string) {
-    const tag = raw.trim().toLowerCase().replace(/^#/, "");
-    if (!tag || tags.includes(tag)) return;
-    setTags((prev) => [...prev, tag]);
-  }
-
-  function handleTagKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addTag(tagInput);
-      setTagInput("");
-    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
-      setTags((prev) => prev.slice(0, -1));
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -135,7 +123,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       formData.append("type", cardType);
       if (content) formData.append("content", content);
       if (time) formData.append("time", time);
-      formData.append("tags", JSON.stringify(tags));
+      formData.append("tags", JSON.stringify(extractTags(content)));
 
       const originalIds = (editCard.images?.length > 0
         ? editCard.images.map((i) => i.public_id)
@@ -164,7 +152,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       formData.append("type", cardType);
       if (content) formData.append("content", content);
       if (manualTime && time) formData.append("time", time);
-      formData.append("tags", JSON.stringify(tags));
+      formData.append("tags", JSON.stringify(extractTags(content)));
       for (const s of newSlots) formData.append("image", s.file);
       const res = await fetch("/api/cards", { method: "POST", body: formData });
       if (!res.ok) {
@@ -307,28 +295,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 rows={8}
                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none ${isDark ? "border-gray-700 bg-[#111] text-white placeholder-gray-600" : "border-gray-200 bg-white text-gray-900 placeholder-gray-400"}`}
               />
-
-              {/* 태그 입력 */}
-              <div className={`flex flex-wrap gap-1.5 items-center min-h-[40px] border rounded-lg px-3 py-2 ${isDark ? "border-gray-700 bg-[#111]" : "border-gray-200 bg-white"}`}>
-                <Hash size={13} className={isDark ? "text-gray-600" : "text-gray-400"} />
-                {tags.map((tag) => (
-                  <span key={tag} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-600"}`}>
-                    {tag}
-                    <button type="button" onClick={() => setTags((prev) => prev.filter((t) => t !== tag))} className="hover:opacity-70">
-                      <X size={10} />
-                    </button>
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  onBlur={() => { if (tagInput) { addTag(tagInput); setTagInput(""); } }}
-                  placeholder={tags.length === 0 ? "태그 입력 후 Enter" : ""}
-                  className={`flex-1 min-w-[80px] text-sm bg-transparent outline-none ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
-                />
-              </div>
 
               {error && <p className="text-red-500 text-sm">{error}</p>}
             </form>
