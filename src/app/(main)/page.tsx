@@ -40,16 +40,12 @@ export default function HomePage() {
       <CollapsingHeader show={showHeader} />
 
       {/* Calendar */}
-      <main className="flex-1 overflow-y-auto px-4 py-6" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
-        {loading ? (
-          <div className="flex items-center justify-center h-64">
+      <main className="flex-1 overflow-y-auto px-4 py-6 relative" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
+        <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
           </div>
-        ) : (
-          <CalendarGrid
-            dayMetas={dayMetas}
-            onMonthChange={setCurrentMonth}
-          />
         )}
       </main>
 

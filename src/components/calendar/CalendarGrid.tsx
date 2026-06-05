@@ -117,8 +117,6 @@ export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
               const prev = subMonths(current, 1);
               setCurrent(prev);
               onMonthChange?.(format(prev, "yyyy-MM"));
-              if (window.innerWidth < 640) setSelectedDay(format(day, "yyyy-MM-dd"));
-              else router.push(`/${format(day, "yyyy-MM-dd")}`);
             }}
           />
         ))}
@@ -151,8 +149,6 @@ export function CalendarGrid({ dayMetas, onMonthChange }: CalendarGridProps) {
               const next = addMonths(current, 1);
               setCurrent(next);
               onMonthChange?.(format(next, "yyyy-MM"));
-              if (window.innerWidth < 640) setSelectedDay(format(day, "yyyy-MM-dd"));
-              else router.push(`/${format(day, "yyyy-MM-dd")}`);
             }}
           />
         ))}
