@@ -479,6 +479,24 @@ async function downloadCard(card: Card, isDark: boolean) {
   URL.revokeObjectURL(url);
 }
 
+async function downloadAllCards(card: Card, isDark: boolean) {
+  const images = card.images?.length > 0
+    ? card.images
+    : card.image_url ? [{ url: card.image_url, public_id: "" }] : [];
+  for (let i = 0; i < images.length; i++) {
+    const single = { ...card, images: [images[i]], image_url: images[i].url };
+    const blob = await buildCardBlob(single, isDark);
+    if (!blob) continue;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jotday-${card.date}-${i + 1}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (i < images.length - 1) await new Promise((r) => setTimeout(r, 300));
+  }
+}
+
 
 function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, onStar, isRep, starColor, starDimColor, onEdit, onDelete, menuDir }: {
   size: number; btnBg: string; isDark: boolean; p: (id: string) => boolean; order: string[];
@@ -567,9 +585,12 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
 
   async function handleDownload() {
     setSharing(true);
-    await downloadCard(card, isDark);
+    const hasMultiple = (card.images?.length ?? 0) > 1;
+    if (hasMultiple) await downloadAllCards(card, isDark);
+    else await downloadCard(card, isDark);
     setSharing(false);
   }
+
 
   async function handleShareLink() {
     setSharing(true);
@@ -606,7 +627,8 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
 
   const handleStar = onSetRepresentative ? () => onSetRepresentative(card.id) : undefined;
 
-  const effectiveOrder = shareView ? ["download"] : order;
+  const hasImages = images.length > 0;
+  const effectiveOrder = (shareView ? ["download"] : order).filter((id) => id !== "download" || hasImages);
   const effectiveP = shareView ? () => true : p;
 
   return (
