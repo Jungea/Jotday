@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { ArrowUp, X, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowUp, CalendarDays, Link as LinkIcon, Plus, X } from "lucide-react";
 import { format, subDays, subMonths, subYears, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
+import { CardForm } from "@/components/cards/CardForm";
+import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import { useFeedPresetsStore } from "@/store/feedPresets";
+import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Card } from "@/types";
 import type { BuiltinKey } from "@/store/feedPresets";
 
@@ -38,7 +41,38 @@ type FilterCache = {
   appliedFrom: string; appliedTo: string;
 };
 
+function ModalCardList({ cards, isDark, scrollToId, onDelete, onEdit, onSetRepresentative }: {
+  cards: Card[]; isDark: boolean; scrollToId: string | null;
+  onDelete: (id: string) => void; onEdit: (card: Card) => void; onSetRepresentative: (id: string) => void;
+}) {
+  useEffect(() => {
+    if (!scrollToId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`modal-card-${scrollToId}`);
+      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [scrollToId, cards]);
+
+  return (
+    <div className="flex flex-col items-center gap-4 pb-6">
+      {cards.map((card) => (
+        <div key={card.id} id={`modal-card-${card.id}`} className="w-full max-w-sm">
+          <CardItem
+            card={card}
+            isDark={isDark}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            onSetRepresentative={onSetRepresentative}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function FeedPage() {
+  const router = useRouter();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === "dark";
   const allPresets = useFeedPresetsStore((s) => s.presets);
@@ -61,6 +95,11 @@ export default function FeedPage() {
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [modalCards, setModalCards] = useState<Card[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
+  const [modalScrollToId, setModalScrollToId] = useState<string | null>(null);
+  const [modalEditCard, setModalEditCard] = useState<Card | null>(null);
+  const [modalShowForm, setModalShowForm] = useState(false);
+  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
+  const expiryDays = useShareSettingsStore((s) => s.expiryDays);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -140,13 +179,48 @@ export default function FeedPage() {
     return () => { if (el) observer.unobserve(el); };
   }, [hasMore, loading, fetchPage]);
 
-  async function openModal(date: string) {
+  async function openModal(date: string, scrollToId?: string) {
     setModalDate(date);
     setModalCards([]);
+    setModalScrollToId(scrollToId ?? null);
     setModalLoading(true);
     const res = await fetch(`/api/cards?date=${date}`);
     if (res.ok) setModalCards(await res.json());
     setModalLoading(false);
+  }
+
+  async function refreshModalCards(date: string) {
+    const res = await fetch(`/api/cards?date=${date}`);
+    if (res.ok) setModalCards(await res.json());
+  }
+
+  async function handleModalDelete(id: string) {
+    const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setModalCards((prev) => prev.filter((c) => c.id !== id));
+      setCards((prev) => prev.filter((c) => c.id !== id));
+    }
+  }
+
+  async function handleModalSetRepresentative(id: string) {
+    const formData = new FormData();
+    formData.append("id", id);
+    formData.append("set_representative", "true");
+    const res = await fetch("/api/cards", { method: "PATCH", body: formData });
+    if (res.ok) {
+      setModalCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
+    }
+  }
+
+  async function handleShareDate(date: string) {
+    const res = await fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date, expires_in_days: expiryDays }),
+    });
+    if (!res.ok) return;
+    const { token, expires_at } = await res.json();
+    setShareLinkModal({ url: `${window.location.origin}/share/${token}`, expiresAt: expires_at });
   }
 
   // 스크롤 위치 감지 → 위로가기 버튼 표시
@@ -242,8 +316,17 @@ export default function FeedPage() {
                       {format(new Date(card.date), "yyyy년 M월 d일 (E)", { locale: ko })}
                     </div>
                   )}
-                  <div className="cursor-pointer" onClick={() => openModal(card.date)}>
-                    <CardItem card={card} isDark={isDark} />
+                  <div
+                    className="cursor-pointer"
+                    onPointerDown={(e) => { (e.currentTarget as HTMLElement).dataset.startX = String(e.clientX); }}
+                    onClick={(e) => {
+                      const startX = Number((e.currentTarget as HTMLElement).dataset.startX ?? e.clientX);
+                      if (Math.abs(e.clientX - startX) > 8) return;
+                      if ((e.target as HTMLElement).closest("button")) return;
+                      openModal(card.date, card.id);
+                    }}
+                  >
+                    <CardItem card={card} isDark={isDark} shareView={true} disableLightbox={true} />
                   </div>
                 </div>
               );
@@ -266,22 +349,34 @@ export default function FeedPage() {
       {modalDate && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setModalDate(null)} />
-          <div className={`relative rounded-t-2xl flex flex-col max-h-[80dvh] ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
+          <div className={`relative rounded-t-2xl flex flex-col max-h-[90dvh] ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
             {/* Handle */}
             <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mt-3 mb-1 shrink-0" />
 
             {/* Header */}
-            <div className={`flex items-center justify-between px-5 py-3 shrink-0 border-b ${isDark ? "border-gray-800" : "border-gray-100"}`}>
+            <div className={`flex items-center justify-between px-4 py-3 shrink-0 border-b ${isDark ? "border-gray-800" : "border-gray-100"}`}>
               <span className={`font-semibold text-sm ${isDark ? "text-white" : "text-gray-900"}`}>
                 {format(parseISO(modalDate), "yyyy년 M월 d일 (E)", { locale: ko })}
               </span>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/${modalDate}`}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => router.push(`/?month=${modalDate.slice(0, 7)}`)}
                   className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
                 >
-                  <ExternalLink size={16} />
-                </Link>
+                  <CalendarDays size={16} />
+                </button>
+                <button
+                  onClick={() => handleShareDate(modalDate)}
+                  className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+                >
+                  <LinkIcon size={16} />
+                </button>
+                <button
+                  onClick={() => setModalShowForm(true)}
+                  className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+                >
+                  <Plus size={16} />
+                </button>
                 <button
                   onClick={() => setModalDate(null)}
                   className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
@@ -300,17 +395,50 @@ export default function FeedPage() {
               ) : modalCards.length === 0 ? (
                 <p className={`text-center text-sm py-12 ${sub}`}>카드가 없어요.</p>
               ) : (
-                <div className="flex flex-col items-center gap-4 pb-6">
-                  {modalCards.map((card) => (
-                    <div key={card.id} className="w-full max-w-sm">
-                      <CardItem card={card} isDark={isDark} />
-                    </div>
-                  ))}
-                </div>
+                <ModalCardList
+                  cards={modalCards}
+                  isDark={isDark}
+                  scrollToId={modalScrollToId}
+                  onDelete={handleModalDelete}
+                  onEdit={(c) => setModalEditCard(c)}
+                  onSetRepresentative={handleModalSetRepresentative}
+                />
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {modalShowForm && modalDate && (
+        <CardForm
+          date={modalDate}
+          onSuccess={async () => {
+            setModalShowForm(false);
+            await refreshModalCards(modalDate);
+          }}
+          onCancel={() => setModalShowForm(false)}
+        />
+      )}
+
+      {modalEditCard && modalDate && (
+        <CardForm
+          date={modalDate}
+          editCard={modalEditCard}
+          onSuccess={() => {
+            setModalEditCard(null);
+            refreshModalCards(modalDate);
+          }}
+          onCancel={() => setModalEditCard(null)}
+        />
+      )}
+
+      {shareLinkModal && (
+        <ShareLinkModal
+          url={shareLinkModal.url}
+          expiresAt={shareLinkModal.expiresAt}
+          onClose={() => setShareLinkModal(null)}
+          isDark={isDark}
+        />
       )}
 
       <BottomTabBar />

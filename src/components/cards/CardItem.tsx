@@ -16,6 +16,7 @@ interface CardItemProps {
   onEdit?: (card: Card) => void;
   onSetRepresentative?: (id: string) => void;
   shareView?: boolean;
+  disableLightbox?: boolean;
 }
 
 function useSwipe(count: number, onTap?: () => void) {
@@ -300,16 +301,22 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
   );
 }
 
-function ImageSwiper({ images }: { images: { url: string }[] }) {
+function ImageSwiper({ images, disableLightbox }: { images: { url: string }[]; disableLightbox?: boolean }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const { index, setIndex, onPointerDown, onPointerUp, onPointerLeave } = useSwipe(images.length, () => setLightboxIndex(index));
+  const openLightbox = disableLightbox ? undefined : () => setLightboxIndex(index);
+  const { index, setIndex, onPointerDown, onPointerUp, onPointerLeave } = useSwipe(images.length, openLightbox);
 
   if (images.length === 0) return null;
   if (images.length === 1) {
     return (
       <>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[0].url} alt="" className="w-full h-auto cursor-pointer" onClick={() => setLightboxIndex(0)} />
+        <img
+          src={images[0].url}
+          alt=""
+          className="w-full h-auto cursor-pointer"
+          onClick={disableLightbox ? undefined : () => setLightboxIndex(0)}
+        />
         {lightboxIndex !== null && <Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
       </>
     );
@@ -547,7 +554,7 @@ function ExpandableContent({ text, className }: { text: string; className: strin
   );
 }
 
-export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepresentative, shareView }: CardItemProps) {
+export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepresentative, shareView, disableLightbox }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isDark = isDarkProp ?? theme === "dark";
   const { expiryDays } = useShareSettingsStore();
@@ -612,7 +619,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
       }`}>
         {images.length > 0 && (
           <div className={`overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
-            <ImageSwiper images={images} />
+            <ImageSwiper images={images} disableLightbox={disableLightbox} />
           </div>
         )}
         <div className="p-4">
