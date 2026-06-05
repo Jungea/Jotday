@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { format, addMonths, subMonths, parse } from "date-fns";
-import { Settings, LayoutList } from "lucide-react";
-import Link from "next/link";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
-import { Logo } from "@/components/Logo";
+import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
+import { BottomTabBar } from "@/components/ui/BottomTabBar";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import type { DayMeta } from "@/types";
 
@@ -13,6 +13,7 @@ export default function HomePage() {
   const [dayMetas, setDayMetas] = useState<DayMeta[]>([]);
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), "yyyy-MM"));
   const [loading, setLoading] = useState(true);
+  const { showHeader, onScroll } = useScrollHeader();
   const theme = useThemeStore((s) => s.theme);
 
   const fetchMetas = useCallback(async (month: string) => {
@@ -35,28 +36,11 @@ export default function HomePage() {
   const isDark = theme === "dark";
 
   return (
-    <div className={isDark ? "theme-dark" : "theme-light"}>
-      {/* Navbar */}
-      <nav className={`flex items-center justify-between px-6 py-4 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
-        <Logo height={44} className={isDark ? "text-white" : "text-gray-900"} />
-        <div className="flex items-center gap-2">
-          <Link
-            href="/feed"
-            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
-          >
-            <LayoutList size={18} />
-          </Link>
-          <Link
-            href="/settings"
-            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
-          >
-            <Settings size={18} />
-          </Link>
-        </div>
-      </nav>
+    <div className={`h-dvh flex flex-col ${isDark ? "theme-dark" : "theme-light"}`}>
+      <CollapsingHeader show={showHeader} />
 
       {/* Calendar */}
-      <main className="px-4 py-6">
+      <main className="flex-1 overflow-y-auto px-4 py-6" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
@@ -68,6 +52,8 @@ export default function HomePage() {
           />
         )}
       </main>
+
+      <BottomTabBar />
     </div>
   );
 }

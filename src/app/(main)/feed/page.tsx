@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowUp, X, ExternalLink } from "lucide-react";
+import { ArrowUp, X, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { format, subDays, subMonths, subYears, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
+import { BottomTabBar } from "@/components/ui/BottomTabBar";
+import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import { useFeedPresetsStore } from "@/store/feedPresets";
 import type { Card } from "@/types";
@@ -37,7 +39,6 @@ type FilterCache = {
 };
 
 export default function FeedPage() {
-  const router = useRouter();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === "dark";
   const allPresets = useFeedPresetsStore((s) => s.presets);
@@ -56,6 +57,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { showHeader, onScroll: onScrollHeader } = useScrollHeader();
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [modalCards, setModalCards] = useState<Card[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
@@ -151,7 +153,11 @@ export default function FeedPage() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => setShowScrollTop(el.scrollTop > 300);
+    const onScroll = () => {
+      const cur = el.scrollTop;
+      setShowScrollTop(cur > 300);
+      onScrollHeader(cur);
+    };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
@@ -164,16 +170,12 @@ export default function FeedPage() {
 
   return (
     <div className={`h-dvh flex flex-col overflow-hidden ${isDark ? "theme-dark" : "theme-light"}`}>
+      <CollapsingHeader show={showHeader} />
+
       {/* Filters */}
       <div className={`shrink-0 px-4 pt-3 pb-2 border-b ${border} ${bg} space-y-2`}>
-        {/* 뒤로가기 + Sort */}
+        {/* Sort */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.back()}
-            className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"} ${sub}`}
-          >
-            <ArrowLeft size={18} />
-          </button>
           {(["desc", "asc"] as Sort[]).map((s) => (
             <button
               key={s}
@@ -310,6 +312,8 @@ export default function FeedPage() {
           </div>
         </div>
       )}
+
+      <BottomTabBar />
 
       {/* 맨 위로 버튼 */}
       {showScrollTop && (

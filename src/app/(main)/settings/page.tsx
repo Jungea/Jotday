@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Eye, EyeOff, GripVertical, LogOut } from "lucide-react";
+import { Check, Eye, EyeOff, GripVertical, LogOut } from "lucide-react";
+import { BottomTabBar } from "@/components/ui/BottomTabBar";
+import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 import {
   DndContext,
   closestCenter,
@@ -78,6 +81,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useThemeStore();
   const { presets, reorder, toggleHidden } = useFeedPresetsStore();
   const isDark = theme === "dark";
+  const { showHeader, onScroll } = useScrollHeader();
 
   async function handleLogout() {
     const supabase = createClient();
@@ -102,18 +106,10 @@ export default function SettingsPage() {
   const sub = isDark ? "text-gray-500" : "text-gray-400";
 
   return (
-    <div className={isDark ? "theme-dark min-h-screen" : "theme-light min-h-screen"}>
-      <header className={`flex items-center gap-3 px-5 py-4 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
-        <button
-          onClick={() => router.back()}
-          className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>설정</h1>
-      </header>
+    <div className={`h-dvh flex flex-col ${isDark ? "theme-dark" : "theme-light"}`}>
+      <CollapsingHeader show={showHeader} />
 
-      <main className="p-6 max-w-md mx-auto space-y-8">
+      <main className="flex-1 overflow-y-auto p-6 max-w-md mx-auto space-y-8 w-full" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
         {/* 테마 */}
         <section>
           <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>테마</h2>
@@ -173,6 +169,8 @@ export default function SettingsPage() {
           </button>
         </section>
       </main>
+
+      <BottomTabBar />
     </div>
   );
 }
