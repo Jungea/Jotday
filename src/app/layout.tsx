@@ -19,8 +19,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Jotday — 나만의 이미지 달력 일기",
-  description: "소중한 순간을 달력에 기록하세요",
+  title: "Jotday",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
