@@ -220,7 +220,7 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
         }}
       />
 
-      {/* Dim with transparent crop hole via box-shadow */}
+      {/* Dim overlay */}
       <div
         style={{
           position: "absolute",
@@ -233,6 +233,59 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
           pointerEvents: "none",
         }}
       />
+
+      {/* 크롭 테두리 + 가이드라인 */}
+      <div
+        style={{
+          position: "absolute",
+          left: fx,
+          top: fy,
+          width: fw,
+          height: fh,
+          pointerEvents: "none",
+          border: "1.5px solid rgba(255,255,255,0.8)",
+          borderRadius: 4,
+          boxSizing: "border-box",
+        }}
+      >
+        {/* 3분할 세로선 */}
+        {[1, 2].map((i) => (
+          <div
+            key={`v${i}`}
+            style={{
+              position: "absolute",
+              left: `${(i / 3) * 100}%`,
+              top: 0,
+              bottom: 0,
+              width: 1,
+              background: "rgba(255,255,255,0.25)",
+            }}
+          />
+        ))}
+        {/* 3분할 가로선 */}
+        {[1, 2].map((i) => (
+          <div
+            key={`h${i}`}
+            style={{
+              position: "absolute",
+              top: `${(i / 3) * 100}%`,
+              left: 0,
+              right: 0,
+              height: 1,
+              background: "rgba(255,255,255,0.25)",
+            }}
+          />
+        ))}
+        {/* 모서리 핸들 */}
+        {[
+          { top: 0,    left: 0,    borderTop: "3px solid #fff", borderLeft: "3px solid #fff" },
+          { top: 0,    right: 0,   borderTop: "3px solid #fff", borderRight: "3px solid #fff" },
+          { bottom: 0, left: 0,    borderBottom: "3px solid #fff", borderLeft: "3px solid #fff" },
+          { bottom: 0, right: 0,   borderBottom: "3px solid #fff", borderRight: "3px solid #fff" },
+        ].map((s, i) => (
+          <div key={i} style={{ position: "absolute", width: 18, height: 18, ...s }} />
+        ))}
+      </div>
 
       {/* Header */}
       <div
