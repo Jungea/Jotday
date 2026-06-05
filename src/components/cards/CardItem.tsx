@@ -1,9 +1,12 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
-import { Trash2, Pencil, Star } from "lucide-react";
+import React, { useRef, useState, useEffect } from "react";
+import { Trash2, Pencil, Star, Download, Link, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
+import { useShareSettingsStore } from "@/store/shareSettings";
+import { useCardActionsStore } from "@/store/cardActions";
+import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import type { Card } from "@/types";
 
 interface CardItemProps {
@@ -12,6 +15,7 @@ interface CardItemProps {
   onDelete?: (id: string) => void;
   onEdit?: (card: Card) => void;
   onSetRepresentative?: (id: string) => void;
+  shareView?: boolean;
 }
 
 function useSwipe(count: number) {
@@ -349,6 +353,164 @@ function ImageSwiper({ images }: { images: { url: string }[] }) {
   );
 }
 
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  for (const para of text.split("\n")) {
+    let line = "";
+    for (const char of para) {
+      const test = line + char;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = char;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
+async function buildCardBlob(card: Card, isDark: boolean): Promise<Blob | null> {
+  const images = card.images?.length > 0
+    ? card.images
+    : card.image_url ? [{ url: card.image_url }] : [];
+
+  const W = 1080, H = 1350;
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  // Background
+  ctx.fillStyle = isDark ? "#111111" : "#f5f5f5";
+  ctx.fillRect(0, 0, W, H);
+
+  // Image
+  if (images.length > 0) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((res, rej) => {
+        img.onload = () => res();
+        img.onerror = rej;
+        img.src = images[0].url;
+      });
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      const canvasRatio = W / H;
+      const imgRatio = iw / ih;
+      let sx = 0, sy = 0, sw = iw, sh = ih;
+      if (imgRatio > canvasRatio) { sw = ih * canvasRatio; sx = (iw - sw) / 2; }
+      else { sh = iw / canvasRatio; sy = (ih - sh) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+    } catch { /* 이미지 로드 실패 시 배경만 */ }
+  }
+
+  // 텍스트가 있으면 하단 그라데이션 오버레이
+  if (card.content && images.length > 0) {
+    const grad = ctx.createLinearGradient(0, H * 0.55, 0, H);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.75)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  const onImage = images.length > 0;
+  const textColor = onImage ? "#ffffff" : (isDark ? "#e5e5e5" : "#111111");
+  const subColor  = onImage ? "rgba(255,255,255,0.55)" : (isDark ? "#555555" : "#aaaaaa");
+
+  // 날짜
+  ctx.font = "300 36px sans-serif";
+  ctx.fillStyle = subColor;
+  ctx.textBaseline = "top";
+  ctx.fillText(format(new Date(card.created_at), "yyyy.MM.dd"), 64, 64);
+
+  // 본문
+  if (card.content) {
+    ctx.font = "400 46px sans-serif";
+    ctx.fillStyle = textColor;
+    ctx.textBaseline = "top";
+    const lines = wrapText(ctx, card.content, W - 128);
+    const lineH = 70;
+    const maxLines = 10;
+    const visible = lines.slice(0, maxLines);
+    let startY = onImage ? H - 80 - visible.length * lineH : 180;
+    for (const line of visible) {
+      ctx.fillText(line, 64, startY);
+      startY += lineH;
+    }
+  }
+
+  // 브랜딩
+  ctx.font = "300 28px sans-serif";
+  ctx.fillStyle = subColor;
+  ctx.textBaseline = "bottom";
+  ctx.textAlign = "right";
+  ctx.fillText("Jotday", W - 64, H - 56);
+
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+}
+
+async function downloadCard(card: Card, isDark: boolean) {
+  const blob = await buildCardBlob(card, isDark);
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `jotday-${card.date}.png`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, onStar, isRep, starColor, starDimColor, onEdit, onDelete, menuDir }: {
+  size: number; btnBg: string; isDark: boolean; p: (id: string) => boolean; order: string[];
+  showMore: boolean; setShowMore: (v: boolean | ((prev: boolean) => boolean)) => void;
+  onDownload: () => void; onLink?: () => void; sharing: boolean;
+  onStar?: () => void; isRep: boolean; starColor: string; starDimColor: string;
+  onEdit?: () => void; onDelete?: () => void;
+  menuDir: "up" | "down";
+}) {
+  const menuClass = `absolute ${menuDir === "up" ? "bottom-8" : "top-8"} right-0 z-50 rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
+  const itemClass = (active?: boolean) => `w-full flex items-center gap-2.5 px-3 py-2 text-xs ${active ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50")}`;
+  const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
+
+  const actionMap: Record<string, React.ReactElement | null> = {
+    download: !p("download") ? <button key="dl" onClick={() => { setShowMore(false); onDownload(); }} disabled={sharing} className={itemClass()}><Download size={13} /> 다운로드</button> : null,
+    link:     !p("link") && onLink ? <button key="lk" onClick={() => { setShowMore(false); onLink(); }} className={itemClass()}><Link size={13} /> 링크 공유</button> : null,
+    star:     !p("star") && onStar ? <button key="st" onClick={() => { setShowMore(false); onStar(); }} className={itemClass(isRep)}><Star size={13} fill={isRep ? "currentColor" : "none"} /> 대표 설정</button> : null,
+    edit:     !p("edit") && onEdit   ? <button key="ed" onClick={() => { setShowMore(false); onEdit(); }} className={itemClass()}><Pencil size={13} /> 수정</button> : null,
+    delete:   !p("delete") && onDelete ? <button key="de" onClick={() => { setShowMore(false); onDelete(); }} className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}><Trash2 size={13} /> 삭제</button> : null,
+  };
+  const overflowEls = order.map((id) => actionMap[id]).filter(Boolean) as React.ReactElement[];
+
+  const pinnedMap: Record<string, React.ReactElement | null> = {
+    download: p("download") ? <button key="dl" onClick={onDownload} disabled={sharing} className={btnClass}><Download size={size} /></button> : null,
+    link:     p("link") && onLink ? <button key="lk" onClick={onLink} className={btnClass}><Link size={size} /></button> : null,
+    star:     p("star") && onStar ? <button key="st" onClick={onStar} className={`${btnBg} rounded-full p-1.5 shadow ${isRep ? starColor : starDimColor}`}><Star size={size} fill={isRep ? "currentColor" : "none"} /></button> : null,
+    edit:     p("edit") && onEdit   ? <button key="ed" onClick={onEdit} className={btnClass}><Pencil size={size} /></button> : null,
+    delete:   p("delete") && onDelete ? <button key="de" onClick={onDelete} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}><Trash2 size={size} /></button> : null,
+  };
+
+  return (
+    <>
+      {order.map((id) => pinnedMap[id])}
+      {overflowEls.length > 0 && (
+        <div className="relative">
+          <button onClick={() => setShowMore((v) => !v)} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+            <MoreHorizontal size={size} />
+          </button>
+          {showMore && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMore(false)} />
+              <div className={menuClass}>{overflowEls}</div>
+            </>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
 function ExpandableContent({ text, className }: { text: string; className: string }) {
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
@@ -374,85 +536,116 @@ function ExpandableContent({ text, className }: { text: string; className: strin
   );
 }
 
-export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepresentative }: CardItemProps) {
+export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepresentative, shareView }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isDark = isDarkProp ?? theme === "dark";
+  const { expiryDays } = useShareSettingsStore();
+  const { order, pinned } = useCardActionsStore();
+  const p = (id: string) => pinned.includes(id as never);
   const timeLabel = format(new Date(card.created_at), "HH:mm");
+  const [sharing, setSharing] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
+
+  async function handleDownload() {
+    setSharing(true);
+    await downloadCard(card, isDark);
+    setSharing(false);
+  }
+
+  async function handleShareLink() {
+    setSharing(true);
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ card_id: card.id, expires_in_days: expiryDays }),
+      });
+      const data = await res.json();
+      if (data.token) {
+        setShareLinkModal({ url: `${window.location.origin}/share/${data.token}`, expiresAt: data.expires_at });
+      }
+    } finally {
+      setSharing(false);
+    }
+  }
 
   const images = card.images?.length > 0
     ? card.images
     : card.image_url
       ? [{ url: card.image_url, public_id: card.image_public_id ?? "" }]
       : [];
-  const hasImage = images.length > 0;
 
-  const repGlow = isDark
-    ? "ring-2 ring-white shadow-[0_0_0_2px_#fff,0_0_40px_10px_rgba(255,255,255,0.15)]"
-    : "ring-2 ring-amber-400 shadow-[0_0_0_2px_#fbbf24,0_0_40px_12px_rgba(251,191,36,0.4)]";
-
+  const isRep = !!card.is_representative;
   const btnBg = isDark ? "bg-gray-800" : "bg-white";
   const starColor = isDark ? "text-white" : "text-gray-900";
-  const starDimColor = isDark ? "text-gray-600 hover:text-white" : "text-gray-300 hover:text-gray-900";
+  const starDimColor = isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900";
+  const repGlow = isRep
+    ? isDark
+      ? "ring-2 ring-white/50 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+      : "ring-2 ring-gray-800/60 shadow-[0_0_20px_rgba(0,0,0,0.25)]"
+    : "";
+
+  const handleStar = onSetRepresentative ? () => onSetRepresentative(card.id) : undefined;
+
+  const effectiveOrder = shareView ? ["download"] : order;
+  const effectiveP = shareView ? () => true : p;
 
   return (
-    <div className={`relative rounded-xl overflow-hidden group ${
-      isDark
-        ? `bg-[#1c1c1c] border border-gray-800 ${card.is_representative ? repGlow : "shadow-none"}`
-        : `bg-white ${card.is_representative ? repGlow : "shadow-sm border border-gray-200"}`
-    }`}>
-      {images.length > 0 && <ImageSwiper images={images} />}
-      <div className="p-4">
-        {card.content && (
-          <ExpandableContent
-            text={card.content}
-            className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
-          />
-        )}
-        <div className="flex items-center justify-between mt-2">
-          <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
-          <div className="flex gap-1 sm:hidden">
-            {onSetRepresentative && hasImage && (
-              <button
-                onClick={() => onSetRepresentative(card.id)}
-                className={`${btnBg} rounded-full p-1.5 shadow ${card.is_representative ? starColor : starDimColor}`}
-              >
-                <Star size={13} fill={card.is_representative ? "currentColor" : "none"} />
-              </button>
-            )}
-            {onEdit && (
-              <button onClick={() => onEdit(card)} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                <Pencil size={13} />
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={() => { if (window.confirm("삭제할까요?")) onDelete(card.id); }} className={`${btnBg} rounded-full p-1.5 shadow text-red-400`}>
-                <Trash2 size={13} />
-              </button>
-            )}
+    <>
+      <div className={`rounded-xl ${repGlow}`}>
+      <div className={`relative rounded-xl overflow-hidden group ${
+        isDark
+          ? "bg-[#1c1c1c] border border-gray-800 shadow-none"
+          : "bg-white shadow-sm border border-gray-200"
+      }`}>
+        {images.length > 0 && <ImageSwiper images={images} />}
+        <div className="p-4">
+          {card.content && (
+            <ExpandableContent
+              text={card.content}
+              className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
+            />
+          )}
+          <div className="flex items-center justify-between mt-2">
+            <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
+            <div className="flex gap-1 sm:hidden items-center">
+              <ActionButtons size={13} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
+                showMore={showMore} setShowMore={setShowMore}
+                onDownload={handleDownload} sharing={sharing}
+                onLink={shareView ? undefined : handleShareLink}
+                onStar={shareView ? undefined : handleStar}
+                isRep={isRep} starColor={starColor} starDimColor={starDimColor}
+                onEdit={onEdit ? () => onEdit(card) : undefined}
+                onDelete={onDelete ? () => { if (window.confirm("삭제할까요?")) onDelete(card.id); } : undefined}
+                menuDir="up"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
-        {onSetRepresentative && hasImage && (
-          <button
-            onClick={() => onSetRepresentative(card.id)}
-            className={`${btnBg} rounded-full p-1.5 shadow ${card.is_representative ? starColor : starDimColor}`}
-          >
-            <Star size={14} fill={card.is_representative ? "currentColor" : "none"} />
-          </button>
-        )}
-        {onEdit && (
-          <button onClick={() => onEdit(card)} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`}>
-            <Pencil size={14} />
-          </button>
-        )}
-        {onDelete && (
-          <button onClick={() => { if (window.confirm("삭제할까요?")) onDelete(card.id); }} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>
-            <Trash2 size={14} />
-          </button>
-        )}
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
+          <ActionButtons size={14} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
+            showMore={showMore} setShowMore={setShowMore}
+            onDownload={handleDownload} sharing={sharing}
+            onLink={shareView ? undefined : handleShareLink}
+            onStar={shareView ? undefined : handleStar}
+            isRep={isRep} starColor={starColor} starDimColor={starDimColor}
+            onEdit={onEdit ? () => onEdit(card) : undefined}
+            onDelete={onDelete ? () => { if (window.confirm("삭제할까요?")) onDelete(card.id); } : undefined}
+            menuDir="down"
+          />
+        </div>
       </div>
-    </div>
+      </div>
+      {shareLinkModal && (
+        <ShareLinkModal
+          url={shareLinkModal.url}
+          expiresAt={shareLinkModal.expiresAt}
+          onClose={() => setShareLinkModal(null)}
+          isDark={isDark}
+        />
+      )}
+    </>
   );
 }
