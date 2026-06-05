@@ -7,16 +7,16 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "소중한 순간을 달력에 기록하세요",
     start_url: "/",
     display: "standalone",
-    background_color: "#0f0f0f",
-    theme_color: "#0f0f0f",
+    background_color: "#ffffff",
+    theme_color: "#ffffff",
     icons: [
       {
-        src: "/icon-192.png",
+        src: "/icon-192-light.png",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        src: "/icon-512.png",
+        src: "/icon-512-light.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
