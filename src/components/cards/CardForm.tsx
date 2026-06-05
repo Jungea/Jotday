@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import type { DragEvent } from "react";
 import { format } from "date-fns";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Camera } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { useThemeStore } from "@/store/theme";
@@ -44,6 +44,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const isEdit = !!editCard;
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -245,21 +246,36 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               )}
 
               {/* 이미지 추가 버튼 */}
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className={`w-full h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
-              >
-                <Upload size={16} />
-                <span className="text-sm">
-                  {slots.length > 0 ? "이미지 추가" : "이미지 업로드"}
-                </span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                >
+                  <Upload size={16} />
+                  <span className="text-sm">{slots.length > 0 ? "이미지 추가" : "업로드"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraRef.current?.click()}
+                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                >
+                  <Camera size={16} />
+                </button>
+              </div>
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
                 multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 onChange={handleFileChange}
                 className="hidden"
               />
