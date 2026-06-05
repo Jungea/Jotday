@@ -2,9 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Jotday — 나만의 이미지 달력 일기",
+    name: "Jotday",
     short_name: "Jotday",
-    description: "소중한 순간을 달력에 기록하세요",
     start_url: "/",
     display: "standalone",
     background_color: "#111111",
