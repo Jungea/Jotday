@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { format, subDays, subMonths, subYears } from "date-fns";
+import { ArrowLeft, ArrowUp, X, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { format, subDays, subMonths, subYears, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
@@ -27,6 +28,14 @@ function getBuiltinRange(id: BuiltinKey): { from: string; to: string } {
   }
 }
 
+const FILTER_KEY = "feed-filter";
+
+type FilterCache = {
+  sort: Sort; selectedId: SelectedId;
+  customFrom: string; customTo: string;
+  appliedFrom: string; appliedTo: string;
+};
+
 export default function FeedPage() {
   const router = useRouter();
   const theme = useThemeStore((s) => s.theme);
@@ -35,7 +44,7 @@ export default function FeedPage() {
   const visiblePresets = allPresets.filter((p) => !p.hidden);
 
   const [sort, setSort] = useState<Sort>("desc");
-  const [selectedId, setSelectedId] = useState<SelectedId>(() => visiblePresets[0]?.id ?? "week");
+  const [selectedId, setSelectedId] = useState<SelectedId>(visiblePresets[0]?.id ?? "week");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [appliedFrom, setAppliedFrom] = useState("");
@@ -46,13 +55,40 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [modalDate, setModalDate] = useState<string | null>(null);
+  const [modalCards, setModalCards] = useState<Card[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const fetchingRef = useRef(false);
 
   const { from, to } = selectedId === "custom"
     ? { from: appliedFrom, to: appliedTo }
     : getBuiltinRange(selectedId as BuiltinKey);
+
+  // 필터 복원
+  useEffect(() => {
+    const raw = sessionStorage.getItem(FILTER_KEY);
+    if (!raw) return;
+    try {
+      const f: FilterCache = JSON.parse(raw);
+      setSort(f.sort);
+      setSelectedId(f.selectedId);
+      setCustomFrom(f.customFrom);
+      setCustomTo(f.customTo);
+      setAppliedFrom(f.appliedFrom);
+      setAppliedTo(f.appliedTo);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 필터 저장
+  useEffect(() => {
+    const data: FilterCache = { sort, selectedId, customFrom, customTo, appliedFrom, appliedTo };
+    sessionStorage.setItem(FILTER_KEY, JSON.stringify(data));
+  }, [sort, selectedId, customFrom, customTo, appliedFrom, appliedTo]);
 
   const fetchPage = useCallback(async (pageNum: number, reset = false) => {
     if (fetchingRef.current) return;
@@ -74,23 +110,6 @@ export default function FeedPage() {
     setInitialLoaded(true);
     fetchingRef.current = false;
   }, [sort, from, to]);
-
-  async function handleSetRepresentative(id: string) {
-    const formData = new FormData();
-    formData.append("id", id);
-    formData.append("set_representative", "true");
-    const res = await fetch("/api/cards", { method: "PATCH", body: formData });
-    if (res.ok) {
-      const updated: Card = await res.json();
-      setCards((prev) =>
-        prev.map((c) =>
-          c.date === updated.date
-            ? { ...c, is_representative: c.id === id }
-            : c
-        )
-      );
-    }
-  }
 
   useEffect(() => {
     setCards([]);
@@ -118,6 +137,24 @@ export default function FeedPage() {
     if (el) observer.observe(el);
     return () => { if (el) observer.unobserve(el); };
   }, [hasMore, loading, fetchPage]);
+
+  async function openModal(date: string) {
+    setModalDate(date);
+    setModalCards([]);
+    setModalLoading(true);
+    const res = await fetch(`/api/cards?date=${date}`);
+    if (res.ok) setModalCards(await res.json());
+    setModalLoading(false);
+  }
+
+  // 스크롤 위치 감지 → 위로가기 버튼 표시
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => setShowScrollTop(el.scrollTop > 300);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   const bg = isDark ? "bg-[#111]" : "bg-white";
   const border = isDark ? "border-gray-800" : "border-gray-200";
@@ -183,7 +220,7 @@ export default function FeedPage() {
       </div>
 
       {/* Cards */}
-      <main className="flex-1 overflow-y-auto">
+      <main ref={scrollRef} className="flex-1 overflow-y-auto">
         {!initialLoaded ? (
           <div className="flex items-center justify-center h-full">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
@@ -194,14 +231,21 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
-            {cards.map((card) => (
-              <div key={card.id} className="w-full max-w-sm">
-                <div className={`text-xs mb-1 ${sub}`}>
-                  {format(new Date(card.date), "yyyy년 M월 d일 (E)", { locale: ko })}
+            {cards.map((card, i) => {
+              const showDate = i === 0 || cards[i - 1].date !== card.date;
+              return (
+                <div key={card.id} className="w-full max-w-sm">
+                  {showDate && (
+                    <div className={`text-xs mb-1 ${i > 0 ? "mt-2" : ""} ${sub}`}>
+                      {format(new Date(card.date), "yyyy년 M월 d일 (E)", { locale: ko })}
+                    </div>
+                  )}
+                  <div className="cursor-pointer" onClick={() => openModal(card.date)}>
+                    <CardItem card={card} isDark={isDark} />
+                  </div>
                 </div>
-                <CardItem card={card} isDark={isDark} onSetRepresentative={handleSetRepresentative} />
-              </div>
-            ))}
+              );
+            })}
 
             <div ref={sentinelRef} className="w-full h-4" />
 
@@ -215,6 +259,68 @@ export default function FeedPage() {
           </div>
         )}
       </main>
+
+      {/* 날짜 카드 모달 */}
+      {modalDate && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setModalDate(null)} />
+          <div className={`relative rounded-t-2xl flex flex-col max-h-[80dvh] ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
+            {/* Handle */}
+            <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mt-3 mb-1 shrink-0" />
+
+            {/* Header */}
+            <div className={`flex items-center justify-between px-5 py-3 shrink-0 border-b ${isDark ? "border-gray-800" : "border-gray-100"}`}>
+              <span className={`font-semibold text-sm ${isDark ? "text-white" : "text-gray-900"}`}>
+                {format(parseISO(modalDate), "yyyy년 M월 d일 (E)", { locale: ko })}
+              </span>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/${modalDate}`}
+                  className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+                >
+                  <ExternalLink size={16} />
+                </Link>
+                <button
+                  onClick={() => setModalDate(null)}
+                  className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto flex-1 px-4 py-4">
+              {modalLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className={`w-7 h-7 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
+                </div>
+              ) : modalCards.length === 0 ? (
+                <p className={`text-center text-sm py-12 ${sub}`}>카드가 없어요.</p>
+              ) : (
+                <div className="flex flex-col items-center gap-4 pb-6">
+                  {modalCards.map((card) => (
+                    <div key={card.id} className="w-full max-w-sm">
+                      <CardItem card={card} isDark={isDark} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 맨 위로 버튼 */}
+      {showScrollTop && (
+        <button
+          onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+          className={`fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors
+            ${isDark ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-900 hover:bg-gray-700 text-white"}`}
+        >
+          <ArrowUp size={18} />
+        </button>
+      )}
     </div>
   );
 }
