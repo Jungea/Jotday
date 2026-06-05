@@ -39,7 +39,8 @@ npm run lint     # ESLint
 - `(main)/links` — 공유 링크 관리 및 만료 기간 설정
 - `api/cards` — 카드 CRUD + 이미지 업로드 + 검색
 - `api/share` — 공유 토큰 생성·조회·삭제
-- `share/[token]` — 공개 공유 페이지 (인증 불필요)
+- `api/settings` — 사용자 설정 조회(GET) · 저장(PATCH), upsert on user_id
+- `share/[token]` — 공개 공유 페이지 (인증 불필요, `generateMetadata`로 OG 태그 동적 생성)
 
 ### Data Flow
 
@@ -50,6 +51,7 @@ npm run lint     # ESLint
 5. **대표 카드**: `PATCH /api/cards` with `set_representative=true` → 해당 날짜의 기존 대표 해제 후 지정
 6. **검색**: `GET /api/cards?q=키워드&tags=태그1,태그2&page=N` → pg_trgm(content) + GIN(tags) 인덱스
 7. **공유**: `POST /api/share` → `share_tokens` 테이블에 토큰 생성. `GET /api/share?token=...` → 공개 카드 조회
+8. **설정 동기화**: `SettingsSync` 컴포넌트가 `(main)/layout.tsx`에 마운트. 앱 진입 시 `GET /api/settings`로 서버 값을 스토어에 덮어쓰고, 이후 변경 시 500ms 디바운스 후 `PATCH /api/settings`로 저장
 
 ### Key Types (`src/types/index.ts`)
 
@@ -61,16 +63,19 @@ Card { id, user_id, date, type: 'image'|'text'|'mixed', title, content,
        is_representative, created_at, updated_at }
 
 DayMeta { date, count, preview_image }
-UserSettings { user_id, theme: 'light'|'dark' }
+UserSettings { user_id, theme: 'light'|'dark',
+               card_actions: JSONB, feed_presets: JSONB, share_settings: JSONB }
 ```
 
 ### State Management
 
-Zustand + `persist` (localStorage):
+Zustand + `persist` (localStorage 캐시) + Supabase 서버 동기화:
 - `src/store/theme.ts` — 테마(light/dark), CSS 클래스 `theme-light` / `theme-dark`
 - `src/store/cardActions.ts` — 카드 액션 버튼 순서·핀 설정
 - `src/store/feedPresets.ts` — 피드 기간 필터 프리셋 순서·숨김
 - `src/store/shareSettings.ts` — 공유 링크 만료 기간
+
+localStorage는 첫 페인트용 캐시. 실제 값은 `user_settings` 테이블의 JSONB 컬럼(`card_actions`, `feed_presets`, `share_settings`)에 저장되며 `SettingsSync`가 마운트 시 로드해 덮어씀.
 
 ### Image Handling
 

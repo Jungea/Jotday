@@ -69,11 +69,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description =
     data.type === "card"
       ? (data.card.content?.slice(0, 120) || null)
-      : data.cards
-          .map((c) => c.content)
-          .filter(Boolean)
-          .join(" · ")
-          .slice(0, 120) || null;
+      : null;
 
   const imageUrl = getImageUrl(data);
 
