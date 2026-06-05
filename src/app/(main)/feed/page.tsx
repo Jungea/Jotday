@@ -349,7 +349,7 @@ export default function FeedPage() {
       {modalDate && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setModalDate(null)} />
-          <div className={`relative rounded-t-2xl flex flex-col max-h-[90dvh] ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
+          <div className={`relative rounded-t-2xl flex flex-col h-[75dvh] ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
             {/* Handle */}
             <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mt-3 mb-1 shrink-0" />
 
