@@ -29,7 +29,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#111] px-8">
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-[#111] px-8">
       <Logo height={52} className="text-white mb-12" />
 
       <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4">
