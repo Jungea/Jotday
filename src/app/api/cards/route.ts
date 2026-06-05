@@ -10,6 +10,34 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
   const month = searchParams.get("month"); // YYYY-MM
+  const feed = searchParams.get("feed");
+
+  if (feed) {
+    const sort = searchParams.get("sort") === "asc" ? "asc" : "desc";
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    const page = parseInt(searchParams.get("page") ?? "0", 10);
+    const limit = 20;
+
+    let query = supabase
+      .from("cards")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("date", { ascending: sort === "asc" })
+      .order("created_at", { ascending: sort === "asc" })
+      .range(page * limit, (page + 1) * limit - 1);
+
+    if (from) query = query.gte("date", from);
+    if (to) query = query.lte("date", to);
+
+    const { data, error } = await query;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({
+      cards: data ?? [],
+      hasMore: (data ?? []).length === limit,
+    });
+  }
 
   if (date) {
     const { data, error } = await supabase

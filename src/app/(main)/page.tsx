@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { format, addMonths, subMonths, parse } from "date-fns";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, LayoutList } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
@@ -50,6 +50,12 @@ export default function HomePage() {
       <nav className={`flex items-center justify-between px-6 py-4 ${isDark ? "bg-[#111] border-b border-gray-800" : "bg-white border-b border-gray-200 shadow-sm"}`}>
         <Logo height={44} className={isDark ? "text-white" : "text-gray-900"} />
         <div className="flex items-center gap-2">
+          <Link
+            href="/feed"
+            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+          >
+            <LayoutList size={18} />
+          </Link>
           <Link
             href="/settings"
             className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
