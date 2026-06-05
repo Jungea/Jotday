@@ -468,13 +468,19 @@ async function buildCardBlob(card: Card, isDark: boolean): Promise<Blob | null> 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
+function cardFilename(card: Card, index?: number) {
+  const time = format(new Date(), "HHmmss");
+  const base = `jotday-${card.date}-${time}`;
+  return index !== undefined ? `${base}-${index + 1}.png` : `${base}.png`;
+}
+
 async function downloadCard(card: Card, isDark: boolean) {
   const blob = await buildCardBlob(card, isDark);
   if (!blob) return;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `jotday-${card.date}.png`;
+  a.download = cardFilename(card);
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -490,7 +496,7 @@ async function downloadAllCards(card: Card, isDark: boolean) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `jotday-${card.date}-${i + 1}.png`;
+    a.download = cardFilename(card, i);
     a.click();
     URL.revokeObjectURL(url);
     if (i < images.length - 1) await new Promise((r) => setTimeout(r, 300));
