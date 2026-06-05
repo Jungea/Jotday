@@ -53,7 +53,22 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get("token");
-  if (!token) return NextResponse.json({ error: "Missing token" }, { status: 400 });
+
+  // 토큰 없으면 내 링크 목록 반환 (인증 필요)
+  if (!token) {
+    const supabase = await createAuthClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { data, error } = await supabase
+      .from("share_tokens")
+      .select("id, token, card_id, date, expires_at, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data ?? []);
+  }
 
   const admin = createAdminClient();
 
@@ -95,4 +110,22 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ error: "Invalid token" }, { status: 404 });
+}
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createAuthClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const { error } = await supabase
+    .from("share_tokens")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }

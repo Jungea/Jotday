@@ -33,7 +33,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/register");
   const isPublicPage = request.nextUrl.pathname.startsWith("/share/") ||
-    (request.nextUrl.pathname === "/api/share" && request.method === "GET");
+    (request.nextUrl.pathname === "/api/share" && request.method === "GET" && !!request.nextUrl.searchParams.get("token"));
 
   if (error?.code === "refresh_token_not_found" && !isAuthPage && !isPublicPage) {
     const url = request.nextUrl.clone();

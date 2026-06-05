@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
+import { Logo } from "@/components/Logo";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
 
@@ -34,15 +35,15 @@ export default function SharePage() {
     : "만료 없음";
 
   const dateLabel = data?.type === "date"
-    ? format(parseISO(data.date), "M월 d일 (E)", { locale: ko })
+    ? format(parseISO(data.date), "yyyy년 M월 d일 (E)", { locale: ko })
     : data?.type === "card"
-      ? format(parseISO(data.card.date), "M월 d일 (E)", { locale: ko })
+      ? format(parseISO(data.card.date), "yyyy년 M월 d일 (E)", { locale: ko })
       : "";
 
   return (
     <div className={`min-h-dvh flex flex-col ${isDark ? "theme-dark bg-[#111] text-white" : "theme-light bg-gray-50 text-gray-900"}`}>
       <header className={`shrink-0 flex items-center justify-between px-4 py-3 border-b ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200 shadow-sm"}`}>
-        <span className={`text-base font-bold tracking-tight ${isDark ? "text-white" : "text-gray-900"}`}>Jotday</span>
+        <Logo height={32} className={isDark ? "text-white" : "text-gray-900"} />
         {dateLabel && (
           <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>{dateLabel}</span>
         )}

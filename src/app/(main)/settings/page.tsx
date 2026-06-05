@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Eye, EyeOff, GripVertical, LogOut } from "lucide-react";
+import { Check, Eye, EyeOff, GripVertical, Link, LogOut } from "lucide-react";
 import { useCardActionsStore, ACTION_LABELS } from "@/store/cardActions";
 import type { ActionId } from "@/store/cardActions";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
@@ -26,7 +26,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import { useThemeStore } from "@/store/theme";
 import { useFeedPresetsStore } from "@/store/feedPresets";
-import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Theme } from "@/types";
 import type { PresetItem, BuiltinKey } from "@/store/feedPresets";
 
@@ -101,7 +100,6 @@ export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useThemeStore();
   const { presets, reorder, toggleHidden } = useFeedPresetsStore();
-  const { expiryDays, setExpiryDays } = useShareSettingsStore();
   const { order, pinned, toggle, reorder: reorderActions } = useCardActionsStore();
   const isDark = theme === "dark";
   const { showHeader, onScroll } = useScrollHeader();
@@ -134,6 +132,19 @@ export default function SettingsPage() {
 
       <main className="flex-1 overflow-y-auto" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
         <div className="p-6 max-w-md mx-auto space-y-8">
+        {/* 공유한 링크 관리 */}
+        <section>
+          <button
+            onClick={() => router.push("/links")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+              isDark ? "bg-[#1c1c1c] hover:bg-gray-800 text-white" : "bg-gray-50 hover:bg-gray-100 text-gray-900"
+            }`}
+          >
+            <Link size={16} className={isDark ? "text-gray-400" : "text-gray-500"} />
+            <span className="text-sm font-medium">공유한 링크 관리</span>
+          </button>
+        </section>
+
         {/* 테마 */}
         <section>
           <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>테마</h2>
@@ -178,26 +189,6 @@ export default function SettingsPage() {
               </div>
             </SortableContext>
           </DndContext>
-        </section>
-
-        {/* 링크 공유 */}
-        <section>
-          <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>링크 공유 만료 기간</h2>
-          <div className="flex gap-2 flex-wrap">
-            {([{ label: "1일", value: 1 }, { label: "7일", value: 7 }, { label: "30일", value: 30 }, { label: "무제한", value: null }] as { label: string; value: number | null }[]).map((opt) => (
-              <button
-                key={opt.label}
-                onClick={() => setExpiryDays(opt.value)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors
-                  ${expiryDays === opt.value
-                    ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
-                    : isDark ? "bg-[#1c1c1c] text-gray-400 border border-gray-800" : "bg-white text-gray-500 border border-gray-200"
-                  }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
         </section>
 
         {/* 카드 액션 */}

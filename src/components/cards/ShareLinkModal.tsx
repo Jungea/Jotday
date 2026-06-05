@@ -21,7 +21,7 @@ export function ShareLinkModal({ url, expiresAt, onClose, isDark }: Props) {
   }
 
   const expiryLabel = expiresAt
-    ? `만료: ${format(parseISO(expiresAt), "yyyy.MM.dd")}`
+    ? `${format(parseISO(expiresAt), "yyyy.MM.dd")}까지 유효`
     : "만료 없음";
 
   return (
