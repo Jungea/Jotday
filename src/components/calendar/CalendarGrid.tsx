@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import {
@@ -36,10 +36,23 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
   );
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showJump, setShowJump] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialMonth) setCurrent(parse(initialMonth, "yyyy-MM", new Date()));
   }, [initialMonth]);
+
+  useEffect(() => {
+    if (!selectedDay) return;
+    function handleClick(e: MouseEvent) {
+      if (gridRef.current?.contains(e.target as Node)) return;
+      if (sheetRef.current?.contains(e.target as Node)) return;
+      setSelectedDay(null);
+    }
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [selectedDay]);
 
   const currentYear = current.getFullYear();
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
@@ -83,7 +96,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
   }
 
   return (
-    <div className="w-full p-2">
+    <div className="w-full p-2" ref={gridRef}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -238,7 +251,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
       {/* 모바일 바텀 시트 */}
       {selectedDay && (
         <>
-          <div className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden rounded-t-2xl shadow-xl p-5 ${isDark ? "bg-[#1c1c1c] border-t border-gray-800" : "bg-white border-t border-gray-200"}`}>
+          <div ref={sheetRef} className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden rounded-t-2xl shadow-xl p-5 ${isDark ? "bg-[#1c1c1c] border-t border-gray-800" : "bg-white border-t border-gray-200"}`}>
             <div className="flex items-center justify-between mb-4">
               <span className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
                 {format(new Date(selectedDay), "M월 d일 (EEE)", { locale: ko })}
