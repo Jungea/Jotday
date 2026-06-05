@@ -44,11 +44,11 @@ body {
 /* Light Theme */
 .theme-light {
   background-color: #f4f4f5;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Dark Theme */
 .theme-dark {
   background-color: #111111;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
