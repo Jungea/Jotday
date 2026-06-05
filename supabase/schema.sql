@@ -16,8 +16,18 @@ CREATE TABLE IF NOT EXISTS cards (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Tags column for search
+ALTER TABLE cards ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
+
 -- Index for fast date lookups per user
 CREATE INDEX IF NOT EXISTS cards_user_date_idx ON cards(user_id, date);
+
+-- Trigram extension for fast ILIKE (full-text) search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- GIN indexes for search performance
+CREATE INDEX IF NOT EXISTS cards_tags_gin_idx ON cards USING GIN (tags);
+CREATE INDEX IF NOT EXISTS cards_content_trgm_idx ON cards USING GIN (content gin_trgm_ops);
 
 -- Row Level Security
 ALTER TABLE cards ENABLE ROW LEVEL SECURITY;

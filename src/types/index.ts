@@ -11,6 +11,7 @@ export interface Card {
   image_url: string | null;
   image_public_id: string | null;
   images: { url: string; public_id: string }[];
+  tags: string[];
   is_representative: boolean;
   created_at: string;
   updated_at: string;

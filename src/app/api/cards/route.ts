@@ -12,6 +12,32 @@ export async function GET(request: NextRequest) {
   const month = searchParams.get("month"); // YYYY-MM
   const feed = searchParams.get("feed");
 
+  const q = searchParams.get("q");
+  const tagsParam = searchParams.get("tags");
+
+  if (q !== null || tagsParam !== null) {
+    const page = parseInt(searchParams.get("page") ?? "0", 10);
+    const limit = 20;
+
+    let query = supabase
+      .from("cards")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(page * limit, (page + 1) * limit - 1);
+
+    if (q) query = query.ilike("content", `%${q}%`);
+    if (tagsParam) {
+      const tags = tagsParam.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+      if (tags.length > 0) query = query.contains("tags", tags);
+    }
+
+    const { data, error } = await query;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ cards: data ?? [], hasMore: (data ?? []).length === limit });
+  }
+
   if (feed) {
     const sort = searchParams.get("sort") === "asc" ? "asc" : "desc";
     const from = searchParams.get("from");
@@ -101,6 +127,8 @@ export async function POST(request: NextRequest) {
   const title = formData.get("title") as string | null;
   const content = formData.get("content") as string | null;
   const time = formData.get("time") as string | null;
+  const tagsRaw = formData.get("tags") as string | null;
+  const tags = tagsRaw ? JSON.parse(tagsRaw) : [];
   const imageFiles = formData.getAll("image") as File[];
 
   const uploadedImages: { url: string; public_id: string }[] = [];
@@ -123,6 +151,7 @@ export async function POST(request: NextRequest) {
     image_url: uploadedImages[0]?.url ?? null,
     image_public_id: uploadedImages[0]?.public_id ?? null,
     images: uploadedImages,
+    tags,
   };
   if (time) insertData.created_at = new Date(`${date}T${time}:00`).toISOString();
 
@@ -173,6 +202,8 @@ export async function PATCH(request: NextRequest) {
   const title = formData.get("title") as string | null;
   const content = formData.get("content") as string | null;
   const time = formData.get("time") as string | null;
+  const tagsRaw2 = formData.get("tags") as string | null;
+  const patchTags = tagsRaw2 ? JSON.parse(tagsRaw2) : undefined;
   const updateImages = formData.get("update_images") === "true";
   const keepIds = formData.getAll("keep_id") as string[];
   const newFiles = (formData.getAll("image") as File[]).filter((f) => f && f.size > 0);
@@ -224,6 +255,7 @@ export async function PATCH(request: NextRequest) {
     type,
     title: title || null,
     content: content || null,
+    ...(patchTags !== undefined && { tags: patchTags }),
   };
   if (newImages !== undefined) {
     updates.images = newImages;

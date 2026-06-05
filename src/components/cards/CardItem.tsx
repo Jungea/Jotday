@@ -657,6 +657,15 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
               className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
             />
           )}
+          {(card.tags ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {(card.tags ?? []).map((tag) => (
+                <span key={tag} className={`text-[11px] px-2 py-0.5 rounded-full ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-500"}`}>
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between mt-2">
             <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
             <div className="flex gap-1 sm:hidden items-center">
