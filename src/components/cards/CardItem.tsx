@@ -160,7 +160,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
               </button>
             )}
             {onDelete && (
-              <button onClick={() => onDelete(card.id)} className={`${btnBg} rounded-full p-1.5 shadow text-red-400`}>
+              <button onClick={() => { if (window.confirm("삭제할까요?")) onDelete(card.id); }} className={`${btnBg} rounded-full p-1.5 shadow text-red-400`}>
                 <Trash2 size={13} />
               </button>
             )}
@@ -183,7 +183,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
           </button>
         )}
         {onDelete && (
-          <button onClick={() => onDelete(card.id)} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>
+          <button onClick={() => { if (window.confirm("삭제할까요?")) onDelete(card.id); }} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>
             <Trash2 size={14} />
           </button>
         )}
