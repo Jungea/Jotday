@@ -2,13 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { format, addMonths, subMonths, parse } from "date-fns";
-import { Settings, LogOut, LayoutList } from "lucide-react";
+import { Settings, LayoutList } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { Logo } from "@/components/Logo";
 import { useThemeStore } from "@/store/theme";
-import { createClient } from "@/lib/supabase/client";
 import type { DayMeta } from "@/types";
 
 export default function HomePage() {
@@ -16,7 +14,6 @@ export default function HomePage() {
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), "yyyy-MM"));
   const [loading, setLoading] = useState(true);
   const theme = useThemeStore((s) => s.theme);
-  const router = useRouter();
 
   const fetchMetas = useCallback(async (month: string) => {
     setLoading(true);
@@ -34,13 +31,6 @@ export default function HomePage() {
   useEffect(() => {
     fetchMetas(currentMonth);
   }, [currentMonth, fetchMetas]);
-
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
 
   const isDark = theme === "dark";
 
@@ -62,12 +52,6 @@ export default function HomePage() {
           >
             <Settings size={18} />
           </Link>
-          <button
-            onClick={handleLogout}
-            className={`p-2 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
-          >
-            <LogOut size={18} />
-          </button>
         </div>
       </nav>
 
