@@ -35,7 +35,7 @@ function useSwipe(count: number, onTap?: () => void) {
     if (!isDragging.current || startX.current === null) return;
     isDragging.current = false;
     const dx = e.clientX - startX.current;
-    if (Math.abs(dx) > 40) {
+    if (Math.abs(dx) > 60) {
       setIndex((i) => dx < 0 ? Math.min(i + 1, count - 1) : Math.max(i - 1, 0));
     } else {
       onTap?.();
@@ -192,7 +192,7 @@ function Lightbox({ images, startIndex, onClose }: { images: { url: string }[]; 
     dragXRef.current = 0;
     withSlideTransition.current = true;
 
-    if (scaleRef.current <= 1 && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+    if (scaleRef.current <= 1 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
       // 스와이프
       setIndex((i) => {
         const next = dx < 0 ? Math.min(i + 1, images.length - 1) : Math.max(i - 1, 0);
