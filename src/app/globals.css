@@ -52,3 +52,7 @@ body {
   background-color: #111111;
   min-height: 100dvh;
 }
+
+.theme-dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
