@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Check } from "lucide-react";
+import { X, Check, RotateCw } from "lucide-react";
 
 const ASPECT_W = 4;
 const ASPECT_H = 5;
@@ -32,6 +32,13 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const rafRef = useRef(0);
+  const [currentSrc, setCurrentSrc] = useState(src);
+  const blobUrls = useRef<string[]>([]);
+
+  useEffect(() => {
+    const urls = blobUrls.current;
+    return () => { urls.forEach(URL.revokeObjectURL); };
+  }, []);
 
   // Synchronously initialized — no race condition with onLoad
   const cropRef = useRef(initCropFrame());
@@ -158,6 +165,25 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  function handleRotate() {
+    const img = imgRef.current;
+    if (!img) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalHeight;
+    canvas.height = img.naturalWidth;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      blobUrls.current.push(url);
+      setCurrentSrc(url);
+    }, "image/jpeg", 0.95);
+  }
+
   function handleConfirm() {
     const img = imgRef.current;
     if (!img) return;
@@ -203,7 +229,7 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imgRef}
-        src={src}
+        src={currentSrc}
         alt=""
         draggable={false}
         onLoad={handleLoad}
@@ -303,14 +329,22 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
         <span className="text-white text-sm font-medium">
           {total && total > 1 ? `사진 조절 ${current} / ${total}` : "사진 조절"}
         </span>
-        <button
-          className="text-amber-400 hover:text-amber-300 font-semibold w-10 h-10 flex items-center justify-center"
-          style={{ pointerEvents: "auto" }}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={handleConfirm}
-        >
-          <Check size={22} />
-        </button>
+        <div className="flex items-center" style={{ pointerEvents: "auto" }}>
+          <button
+            className="text-white/80 hover:text-white w-10 h-10 flex items-center justify-center"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={handleRotate}
+          >
+            <RotateCw size={20} />
+          </button>
+          <button
+            className="text-amber-400 hover:text-amber-300 font-semibold w-10 h-10 flex items-center justify-center"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={handleConfirm}
+          >
+            <Check size={22} />
+          </button>
+        </div>
       </div>
     </div>
   );
