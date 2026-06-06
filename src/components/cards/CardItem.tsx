@@ -8,6 +8,7 @@ import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useCardActionsStore } from "@/store/cardActions";
 import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Card } from "@/types";
 
 interface CardItemProps {
@@ -611,6 +612,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
   const [sharing, setSharing] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function handleDownload() {
     setSharing(true);
@@ -691,7 +693,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
                 onStar={shareView ? undefined : handleStar}
                 isRep={isRep} starColor={starColor} starDimColor={starDimColor}
                 onEdit={onEdit ? () => onEdit(card) : undefined}
-                onDelete={onDelete ? () => { if (window.confirm("삭제할까요?")) onDelete(card.id); } : undefined}
+                onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
                 menuDir="up"
               />
             </div>
@@ -706,7 +708,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
             onStar={shareView ? undefined : handleStar}
             isRep={isRep} starColor={starColor} starDimColor={starDimColor}
             onEdit={onEdit ? () => onEdit(card) : undefined}
-            onDelete={onDelete ? () => { if (window.confirm("삭제할까요?")) onDelete(card.id); } : undefined}
+            onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
             menuDir="down"
           />
         </div>
@@ -717,6 +719,14 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
           url={shareLinkModal.url}
           expiresAt={shareLinkModal.expiresAt}
           onClose={() => setShareLinkModal(null)}
+          isDark={isDark}
+        />
+      )}
+      {showDeleteConfirm && (
+        <ConfirmModal
+          message="카드를 삭제할까요?"
+          onConfirm={() => { setShowDeleteConfirm(false); onDelete!(card.id); }}
+          onCancel={() => setShowDeleteConfirm(false)}
           isDark={isDark}
         />
       )}

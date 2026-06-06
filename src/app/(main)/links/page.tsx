@@ -6,6 +6,7 @@ import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface ShareToken {
   id: string;
@@ -29,6 +30,7 @@ export default function LinksPage() {
   const { expiryDays, setExpiryDays } = useShareSettingsStore();
   const [tokens, setTokens] = useState<ShareToken[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const sub = isDark ? "text-gray-500" : "text-gray-400";
   const cardCls = isDark
@@ -43,7 +45,6 @@ export default function LinksPage() {
   }, []);
 
   async function handleDelete(id: string) {
-    if (!window.confirm("이 링크를 만료 처리할까요?")) return;
     const res = await fetch(`/api/share?id=${id}`, { method: "DELETE" });
     if (res.ok) setTokens((prev) => prev.filter((t) => t.id !== id));
   }
@@ -141,7 +142,7 @@ export default function LinksPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => handleDelete(token.id)}
+                            onClick={() => setConfirmDeleteId(token.id)}
                             className={`p-1.5 rounded-lg transition-colors text-red-400 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-100"}`}
                           >
                             <Trash2 size={15} />
@@ -157,6 +158,15 @@ export default function LinksPage() {
 
         </div>
       </main>
+      {confirmDeleteId && (
+        <ConfirmModal
+          message="이 링크를 만료 처리할까요?"
+          confirmLabel="만료 처리"
+          onConfirm={() => { handleDelete(confirmDeleteId); setConfirmDeleteId(null); }}
+          onCancel={() => setConfirmDeleteId(null)}
+          isDark={isDark}
+        />
+      )}
     </div>
   );
 }
