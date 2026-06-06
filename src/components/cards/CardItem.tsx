@@ -656,9 +656,8 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
       : "ring-2 ring-gray-800/60 shadow-[0_0_20px_rgba(0,0,0,0.25)]"
     : "";
 
-  const handleStar = onSetRepresentative ? () => onSetRepresentative(card.id) : undefined;
-
   const hasImages = images.length > 0;
+  const handleStar = onSetRepresentative && hasImages ? () => onSetRepresentative(card.id) : undefined;
   const effectiveOrder = (shareView ? ["download"] : order).filter((id) => id !== "download" || hasImages);
   const effectiveP = shareView ? () => true : p;
 
