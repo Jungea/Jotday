@@ -122,10 +122,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       formData.append("id", editCard.id);
       formData.append("type", cardType);
       if (content) formData.append("content", content);
-      if (time) {
-        const d = new Date(`${date}T${time}:00`);
-        formData.append("time", `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`);
-      }
+      if (time) formData.append("time", new Date(`${date}T${time}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
 
       const originalIds = (editCard.images?.length > 0
@@ -154,10 +151,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       formData.append("date", date);
       formData.append("type", cardType);
       if (content) formData.append("content", content);
-      if (manualTime && time) {
-        const d = new Date(`${date}T${time}:00`);
-        formData.append("time", `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`);
-      }
+      if (manualTime && time) formData.append("time", new Date(`${date}T${time}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
       for (const s of newSlots) formData.append("image", s.file);
       const res = await fetch("/api/cards", { method: "POST", body: formData });
