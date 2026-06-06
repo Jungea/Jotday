@@ -17,7 +17,7 @@ export function SettingsSync() {
       const { theme } = useThemeStore.getState();
       const { order, pinned } = useCardActionsStore.getState();
       const { presets } = useFeedPresetsStore.getState();
-      const { expiryDays } = useShareSettingsStore.getState();
+      const { expiryDays, daySort } = useShareSettingsStore.getState();
       fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -25,7 +25,7 @@ export function SettingsSync() {
           theme,
           card_actions: { order, pinned },
           feed_presets: { presets },
-          share_settings: { expiryDays },
+          share_settings: { expiryDays, daySort },
         }),
       });
     }, 500);
@@ -51,8 +51,11 @@ export function SettingsSync() {
             });
           if (data.feed_presets?.presets)
             useFeedPresetsStore.setState({ presets: data.feed_presets.presets });
-          if (data.share_settings !== undefined && data.share_settings !== null)
+          if (data.share_settings !== undefined && data.share_settings !== null) {
             useShareSettingsStore.getState().setExpiryDays(data.share_settings.expiryDays);
+            if (data.share_settings.daySort)
+              useShareSettingsStore.getState().setDaySort(data.share_settings.daySort);
+          }
         }
       })
       .finally(() => {

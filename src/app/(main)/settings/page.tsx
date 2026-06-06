@@ -26,6 +26,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import { useThemeStore } from "@/store/theme";
 import { useFeedPresetsStore } from "@/store/feedPresets";
+import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Theme } from "@/types";
 import type { PresetItem, BuiltinKey } from "@/store/feedPresets";
 
@@ -101,6 +102,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useThemeStore();
   const { presets, reorder, toggleHidden } = useFeedPresetsStore();
   const { order, pinned, toggle, reorder: reorderActions } = useCardActionsStore();
+  const { daySort, setDaySort } = useShareSettingsStore();
   const isDark = theme === "dark";
   const { showHeader, onScroll } = useScrollHeader();
 
@@ -167,6 +169,26 @@ export default function SettingsPage() {
                 {theme === t.id && (
                   <Check size={18} className={isDark ? "text-white shrink-0" : "text-gray-900 shrink-0"} />
                 )}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* 날짜별 카드 정렬 */}
+        <section>
+          <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>날짜별 카드 정렬</h2>
+          <div className="flex gap-2">
+            {([{ id: "asc", label: "과거순" }, { id: "desc", label: "최신순" }] as const).map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => setDaySort(opt.id)}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium border-2 transition-all ${
+                  daySort === opt.id
+                    ? isDark ? "border-white bg-gray-800 text-white" : "border-gray-900 bg-gray-50 text-gray-900"
+                    : isDark ? "border-gray-800 bg-[#1c1c1c] text-gray-400 hover:border-gray-700" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"
+                }`}
+              >
+                {opt.label}
               </button>
             ))}
           </div>

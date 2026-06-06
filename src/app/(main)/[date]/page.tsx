@@ -22,10 +22,11 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
   const theme = useThemeStore((s) => s.theme);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
+  const daySort = useShareSettingsStore((s) => s.daySort);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/cards?date=${date}`);
+    const res = await fetch(`/api/cards?date=${date}&sort=${daySort}`);
     if (res.ok) {
       const data: Card[] = await res.json();
       setCards(data);
@@ -34,7 +35,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     }
     setLoading(false);
     return [];
-  }, [date]);
+  }, [date, daySort]);
 
   useEffect(() => {
     fetchCards();

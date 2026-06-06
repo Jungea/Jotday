@@ -66,12 +66,13 @@ export async function GET(request: NextRequest) {
   }
 
   if (date) {
+    const dateSort = searchParams.get("sort") === "desc" ? false : true;
     const { data, error } = await supabase
       .from("cards")
       .select("*")
       .eq("user_id", user.id)
       .eq("date", date)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: dateSort });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
