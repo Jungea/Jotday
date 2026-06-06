@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     images: uploadedImages,
     tags,
   };
-  if (time) insertData.created_at = new Date(`${date}T${time}:00`).toISOString();
+  if (time) insertData.created_at = `${date}T${time}:00.000Z`;
 
   const { data, error } = await supabase.from("cards").insert(insertData).select().single();
 
@@ -263,7 +263,7 @@ export async function PATCH(request: NextRequest) {
     updates.image_public_id = newImages[0]?.public_id ?? null;
   }
   if (time && existing.date) {
-    updates.created_at = new Date(`${existing.date}T${time}:00`).toISOString();
+    updates.created_at = `${existing.date}T${time}:00.000Z`;
   }
 
   const { data, error } = await supabase
