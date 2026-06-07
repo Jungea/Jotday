@@ -54,35 +54,41 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
     if (!files.length) return;
     const MAX = 2400;
-    const promises = files.map(
-      (file) =>
-        new Promise<string>((resolve) => {
-          const objectUrl = URL.createObjectURL(file);
-          const img = new Image();
-          img.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-            const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.round(img.naturalWidth * scale);
-            canvas.height = Math.round(img.naturalHeight * scale);
-            canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL("image/jpeg", 0.88));
-          };
-          img.src = objectUrl;
-        })
-    );
-    Promise.all(promises).then((srcs) => setCropQueue((q) => [...q, ...srcs]));
-    e.target.value = "";
+    const srcs: string[] = [];
+    for (const file of files) {
+      const src = await new Promise<string>((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.naturalWidth * scale);
+          canvas.height = Math.round(img.naturalHeight * scale);
+          canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            canvas.width = 0;
+            if (blob) resolve(URL.createObjectURL(blob));
+            else reject(new Error("toBlob failed"));
+          }, "image/jpeg", 0.85);
+        };
+        img.onerror = reject;
+        img.src = objectUrl;
+      });
+      srcs.push(src);
+    }
+    setCropQueue((q) => [...q, ...srcs]);
   }
 
   function handleCropConfirm(file: File) {
     const url = URL.createObjectURL(file);
     setSlots((prev) => [...prev, { kind: "new", url, file }]);
-    setCropQueue((q) => q.slice(1));
+    setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); });
   }
 
   function handleDragStart(e: DragEvent, index: number) {
@@ -186,7 +192,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           current={slots.length + 1}
           total={slots.length + cropQueue.length}
           onConfirm={handleCropConfirm}
-          onCancel={() => setCropQueue((q) => q.slice(1))}
+          onCancel={() => setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); })}
         />
       )}
       <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
