@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
 import {
   format,
   parse,
@@ -20,8 +19,8 @@ import {
 import { ko } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useThemeStore } from "@/store/theme";
-import { CardItem } from "@/components/cards/CardItem";
-import type { DayMeta, Card } from "@/types";
+import { DaySheet } from "@/components/ui/DaySheet";
+import type { DayMeta } from "@/types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -29,51 +28,23 @@ interface CalendarGridProps {
   dayMetas: DayMeta[];
   onMonthChange?: (month: string) => void;
   initialMonth?: string;
+  onDataChange?: () => void;
 }
 
-export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: CalendarGridProps) {
+export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChange }: CalendarGridProps) {
   const [current, setCurrent] = useState(() =>
     initialMonth ? parse(initialMonth, "yyyy-MM", new Date()) : new Date()
   );
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showJump, setShowJump] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
   const [jumpDragY, setJumpDragY] = useState(0);
   const [jumpIsDragging, setJumpIsDragging] = useState(false);
   const jumpStartY = useRef(0);
-  const [sheetDragY, setSheetDragY] = useState(0);
-  const [sheetIsDragging, setSheetIsDragging] = useState(false);
-  const [sheetExpanded, setSheetExpanded] = useState(false);
-  const sheetStartY = useRef(0);
-  const [sheetCards, setSheetCards] = useState<Card[]>([]);
-  const [sheetCardsLoading, setSheetCardsLoading] = useState(false);
 
   useEffect(() => {
     if (initialMonth) setCurrent(parse(initialMonth, "yyyy-MM", new Date()));
   }, [initialMonth]);
-
-  useEffect(() => {
-    if (!selectedDay) return;
-    function handleClick(e: MouseEvent) {
-      if (gridRef.current?.contains(e.target as Node)) return;
-      if (sheetRef.current?.contains(e.target as Node)) return;
-      setSelectedDay(null);
-    }
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, [selectedDay]);
-
-  useEffect(() => {
-    if (!sheetExpanded || !selectedDay) return;
-    setSheetCardsLoading(true);
-    fetch(`/api/cards?date=${selectedDay}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data: Card[]) => {
-        setSheetCards(data);
-        setSheetCardsLoading(false);
-      });
-  }, [sheetExpanded, selectedDay]);
 
   const currentYear = current.getFullYear();
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
@@ -95,29 +66,6 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
     setJumpDragY(0);
   }
 
-  function onSheetPointerDown(e: React.PointerEvent) {
-    setSheetIsDragging(true);
-    sheetStartY.current = e.clientY;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }
-  function onSheetPointerMove(e: React.PointerEvent) {
-    if (!sheetIsDragging) return;
-    const dy = e.clientY - sheetStartY.current;
-    setSheetDragY(sheetExpanded ? Math.max(0, dy) : Math.max(-100, dy));
-  }
-  function onSheetPointerUp(e: React.PointerEvent) {
-    if (!sheetIsDragging) return;
-    setSheetIsDragging(false);
-    const dy = e.clientY - sheetStartY.current;
-    setSheetDragY(0);
-    if (sheetExpanded) {
-      if (dy > 150) setSheetExpanded(false);
-    } else {
-      if (dy < -80) setSheetExpanded(true);
-      else if (dy > 120) setSelectedDay(null);
-    }
-  }
-
   function handleJump(year: number, month: number) {
     const next = new Date(year, month - 1, 1);
     setCurrent(next);
@@ -129,8 +77,6 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
   const isDark = theme === "dark";
 
   const metaMap = new Map(dayMetas.map((m) => [m.date, m]));
-
-  const selectedMeta = selectedDay ? metaMap.get(selectedDay) : undefined;
 
   const monthStart = startOfMonth(current);
   const monthEnd = endOfMonth(current);
@@ -322,87 +268,18 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
         </div>
       )}
 
-      {/* 모바일 바텀 시트 */}
+      {/* 모바일 날짜 시트 */}
       {selectedDay && (
-        <>
-          <div
-            ref={sheetRef}
-            className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden shadow-xl flex flex-col ${sheetExpanded ? "h-dvh rounded-none" : "rounded-t-2xl"} ${isDark ? "bg-[#1c1c1c] border-t border-gray-800" : "bg-white border-t border-gray-200"}`}
-            style={{
-              transform: `translateY(${sheetDragY}px)`,
-              transition: sheetIsDragging ? "none" : "transform 0.25s ease, height 0.25s ease, border-radius 0.25s ease",
-            }}
-          >
-            <div
-              className="flex justify-center py-3 cursor-grab active:cursor-grabbing touch-none shrink-0"
-              onPointerDown={onSheetPointerDown}
-              onPointerMove={onSheetPointerMove}
-              onPointerUp={onSheetPointerUp}
-              onPointerLeave={onSheetPointerUp}
-            >
-              <div className="w-10 h-1 rounded-full bg-gray-400/40" />
-            </div>
-            <div className="flex items-center justify-between px-5 pb-3 shrink-0">
-              <span className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
-                {format(new Date(selectedDay), "M월 d일 (EEE)", { locale: ko })}
-                {selectedMeta && selectedMeta.count > 0 && (
-                  <span className={`ml-2 text-sm font-normal ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                    {selectedMeta.count}개
-                  </span>
-                )}
-              </span>
-              <button onClick={() => { setSelectedDay(null); setSheetExpanded(false); }} className={isDark ? "text-gray-500" : "text-gray-400"}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {sheetExpanded ? (
-              <div className="overflow-y-auto flex-1 px-5 pb-5">
-                {sheetCardsLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className={`w-7 h-7 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
-                  </div>
-                ) : sheetCards.length === 0 ? (
-                  <button
-                    onClick={() => router.push(`/${selectedDay}`)}
-                    className={`w-full py-10 rounded-xl flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
-                  >
-                    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>탭해서 보러가기</span>
-                  </button>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {sheetCards.map((card) => (
-                      <CardItem
-                        key={card.id}
-                        card={card}
-                        isDark={isDark}
-                        onDelete={() => {}}
-                        onEdit={() => {}}
-                        onSetRepresentative={() => {}}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="px-5 pb-5">
-                {selectedMeta?.preview_image ? (
-                  <button onClick={() => router.push(`/${selectedDay}`)} className="w-full">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={selectedMeta.preview_image} alt="" className="w-full h-56 object-cover rounded-xl" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => router.push(`/${selectedDay}`)}
-                    className={`w-full h-40 rounded-xl flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
-                  >
-                    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>탭해서 보러가기</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </>
+        <div className="sm:hidden">
+          <DaySheet
+            date={selectedDay}
+            isDark={isDark}
+            onClose={() => setSelectedDay(null)}
+            onDataChange={onDataChange}
+            collapsedHeight="40dvh"
+            showBackdrop={false}
+          />
+        </div>
       )}
     </div>
   );

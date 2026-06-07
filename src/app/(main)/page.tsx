@@ -62,7 +62,7 @@ function HomeContent() {
           </div>
         ) : (
           <>
-            <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} initialMonth={currentMonth} />
+            <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} initialMonth={currentMonth} onDataChange={() => fetchMetas(currentMonth)} />
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />

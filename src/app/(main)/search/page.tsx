@@ -2,40 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, X, Hash, CalendarDays, Link as LinkIcon, Plus } from "lucide-react";
+import { Search, X, Hash, CalendarDays } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
-import { CardForm } from "@/components/cards/CardForm";
-import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
+import { DaySheet } from "@/components/ui/DaySheet";
 import { useThemeStore } from "@/store/theme";
-import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Card } from "@/types";
-
-function ModalCardList({ cards, isDark, scrollToId, onDelete, onEdit, onSetRepresentative }: {
-  cards: Card[]; isDark: boolean; scrollToId: string | null;
-  onDelete: (id: string) => void; onEdit: (card: Card) => void; onSetRepresentative: (id: string) => void;
-}) {
-  useEffect(() => {
-    if (!scrollToId) return;
-    const timer = setTimeout(() => {
-      const el = document.getElementById(`modal-card-${scrollToId}`);
-      if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [scrollToId, cards]);
-
-  return (
-    <div className="flex flex-col items-center gap-4 pb-6">
-      {cards.map((card) => (
-        <div key={card.id} id={`modal-card-${card.id}`} className="w-full max-w-sm">
-          <CardItem card={card} isDark={isDark} onDelete={onDelete} onEdit={onEdit} onSetRepresentative={onSetRepresentative} />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -43,7 +17,6 @@ function SearchContent() {
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === "dark";
   const sub = isDark ? "text-gray-500" : "text-gray-400";
-  const expiryDays = useShareSettingsStore((s) => s.expiryDays);
 
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
   const [tagInput, setTagInput] = useState("");
@@ -58,16 +31,7 @@ function SearchContent() {
 
   // 모달
   const [modalDate, setModalDate] = useState<string | null>(null);
-  const [modalCards, setModalCards] = useState<Card[]>([]);
-  const [modalLoading, setModalLoading] = useState(false);
   const [modalScrollToId, setModalScrollToId] = useState<string | null>(null);
-  const [modalEditCard, setModalEditCard] = useState<Card | null>(null);
-  const [modalShowForm, setModalShowForm] = useState(false);
-  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
-  const [modalExpanded, setModalExpanded] = useState(false);
-  const [modalDragY, setModalDragY] = useState(0);
-  const [modalIsDragging, setModalIsDragging] = useState(false);
-  const modalStartY = useRef(0);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const didInitialSearch = useRef(false);
@@ -136,71 +100,9 @@ function SearchContent() {
     handleSearch(newTags);
   }
 
-  // 모달 열기
-  function onHandlePointerDown(e: React.PointerEvent) {
-    setModalIsDragging(true);
-    modalStartY.current = e.clientY;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-  }
-  function onHandlePointerMove(e: React.PointerEvent) {
-    if (!modalIsDragging) return;
-    const dy = e.clientY - modalStartY.current;
-    setModalDragY(modalExpanded ? Math.max(0, dy) : Math.max(-100, dy));
-  }
-  function onHandlePointerUp(e: React.PointerEvent) {
-    if (!modalIsDragging) return;
-    setModalIsDragging(false);
-    const dy = e.clientY - modalStartY.current;
-    setModalDragY(0);
-    if (modalExpanded) {
-      if (dy > 150) setModalExpanded(false);
-    } else {
-      if (dy < -80) setModalExpanded(true);
-      else if (dy > 120) setModalDate(null);
-    }
-  }
-
-  async function openModal(date: string, scrollToId?: string) {
-    setModalExpanded(false);
+  function openModal(date: string, scrollToId?: string) {
     setModalDate(date);
-    setModalCards([]);
     setModalScrollToId(scrollToId ?? null);
-    setModalLoading(true);
-    const res = await fetch(`/api/cards?date=${date}`);
-    if (res.ok) setModalCards(await res.json());
-    setModalLoading(false);
-  }
-
-  async function refreshModalCards(date: string) {
-    const res = await fetch(`/api/cards?date=${date}`);
-    if (res.ok) setModalCards(await res.json());
-  }
-
-  async function handleModalDelete(id: string) {
-    const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setModalCards((prev) => prev.filter((c) => c.id !== id));
-      setCards((prev) => prev.filter((c) => c.id !== id));
-    }
-  }
-
-  async function handleModalSetRepresentative(id: string) {
-    const formData = new FormData();
-    formData.append("id", id);
-    formData.append("set_representative", "true");
-    await fetch("/api/cards", { method: "PATCH", body: formData });
-    setModalCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
-  }
-
-  async function handleShareDate(date: string) {
-    const res = await fetch("/api/share", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date, expires_in_days: expiryDays }),
-    });
-    if (!res.ok) return;
-    const { token, expires_at } = await res.json();
-    setShareLinkModal({ url: `${window.location.origin}/share/${token}`, expiresAt: expires_at });
   }
 
   return (
@@ -301,88 +203,20 @@ function SearchContent() {
 
       {/* 날짜 카드 모달 */}
       {modalDate && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => { setModalDate(null); setModalExpanded(false); }} />
-          <div
-            className={`relative flex flex-col ${modalExpanded ? "h-dvh rounded-none" : "h-[75dvh] rounded-t-2xl"} ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}
-            style={{
-              transform: `translateY(${modalDragY}px)`,
-              transition: modalIsDragging ? "none" : "transform 0.25s ease, height 0.25s ease, border-radius 0.25s ease",
-            }}
-          >
-            <div
-              className="flex justify-center py-3 shrink-0 cursor-grab active:cursor-grabbing touch-none"
-              onPointerDown={onHandlePointerDown}
-              onPointerMove={onHandlePointerMove}
-              onPointerUp={onHandlePointerUp}
-              onPointerLeave={onHandlePointerUp}
-            >
-              <div className="w-10 h-1 rounded-full bg-gray-400/40" />
-            </div>
-            <div className={`flex items-center justify-between px-4 py-3 shrink-0 border-b ${isDark ? "border-gray-800" : "border-gray-100"}`}>
-              <span className={`font-semibold text-sm ${isDark ? "text-white" : "text-gray-900"}`}>
-                {format(parseISO(modalDate), "yyyy년 M월 d일 (E)", { locale: ko })}
-              </span>
-              <div className="flex items-center gap-1">
-                <button onClick={() => router.push(`/?month=${modalDate.slice(0, 7)}`)} className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}>
-                  <CalendarDays size={16} />
-                </button>
-                <button onClick={() => handleShareDate(modalDate)} className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}>
-                  <LinkIcon size={16} />
-                </button>
-                <button onClick={() => setModalShowForm(true)} className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}>
-                  <Plus size={16} />
-                </button>
-                <button onClick={() => { setModalDate(null); setModalExpanded(false); }} className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}>
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="overflow-y-auto flex-1 px-4 py-4">
-              {modalLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className={`w-7 h-7 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
-                </div>
-              ) : modalCards.length === 0 ? (
-                <p className={`text-center text-sm py-12 ${sub}`}>카드가 없어요.</p>
-              ) : (
-                <ModalCardList
-                  cards={modalCards}
-                  isDark={isDark}
-                  scrollToId={modalScrollToId}
-                  onDelete={handleModalDelete}
-                  onEdit={(c) => setModalEditCard(c)}
-                  onSetRepresentative={handleModalSetRepresentative}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modalShowForm && modalDate && (
-        <CardForm
+        <DaySheet
           date={modalDate}
-          onSuccess={async () => { setModalShowForm(false); await refreshModalCards(modalDate); }}
-          onCancel={() => setModalShowForm(false)}
-        />
-      )}
-
-      {modalEditCard && modalDate && (
-        <CardForm
-          date={modalDate}
-          editCard={modalEditCard}
-          onSuccess={() => { setModalEditCard(null); refreshModalCards(modalDate); }}
-          onCancel={() => setModalEditCard(null)}
-        />
-      )}
-
-      {shareLinkModal && (
-        <ShareLinkModal
-          url={shareLinkModal.url}
-          expiresAt={shareLinkModal.expiresAt}
-          onClose={() => setShareLinkModal(null)}
           isDark={isDark}
+          onClose={() => setModalDate(null)}
+          onCardDeleted={(id) => setCards((prev) => prev.filter((c) => c.id !== id))}
+          scrollToId={modalScrollToId ?? undefined}
+          headerActions={
+            <button
+              onClick={() => router.push(`/?month=${modalDate.slice(0, 7)}`)}
+              className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+            >
+              <CalendarDays size={16} />
+            </button>
+          }
         />
       )}
     </div>
