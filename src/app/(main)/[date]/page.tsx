@@ -89,7 +89,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       {/* Header */}
       <header className={`shrink-0 flex items-center gap-3 px-4 py-3 border-b ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200 shadow-sm"}`}>
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push(`/?month=${date.slice(0, 7)}`)}
           className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
           <ArrowLeft size={20} />
