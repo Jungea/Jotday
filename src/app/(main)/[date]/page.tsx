@@ -2,12 +2,11 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Link } from "lucide-react";
+import { ArrowLeft, Plus, Link, Check } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { CardForm } from "@/components/cards/CardForm";
-import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Card } from "@/types";
@@ -19,7 +18,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const [showForm, setShowForm] = useState(false);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
-  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
+  const [linked, setLinked] = useState(false);
   const theme = useThemeStore((s) => s.theme);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
   const daySort = useShareSettingsStore((s) => s.daySort);
@@ -67,9 +66,11 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       body: JSON.stringify({ date, expires_in_days: expiryDays }),
     });
     if (!res.ok) return;
-    const { token, expires_at } = await res.json();
+    const { token } = await res.json();
     const url = `${window.location.origin}/share/${token}`;
-    setShareLinkModal({ url, expiresAt: expires_at });
+    await navigator.clipboard.writeText(url);
+    setLinked(true);
+    setTimeout(() => setLinked(false), 2000);
   }
 
   const parsedDate = parseISO(date);
@@ -110,7 +111,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           onClick={handleShareDate}
           className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
-          <Link size={18} />
+          {linked ? <Check size={18} /> : <Link size={18} />}
         </button>
       </header>
 
@@ -168,14 +169,6 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
         />
       )}
 
-      {shareLinkModal && (
-        <ShareLinkModal
-          url={shareLinkModal.url}
-          expiresAt={shareLinkModal.expiresAt}
-          onClose={() => setShareLinkModal(null)}
-          isDark={isDark}
-        />
-      )}
     </div>
   );
 }

@@ -3,10 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Link as LinkIcon, Plus, X } from "lucide-react";
+import { Link as LinkIcon, Plus, X, Check } from "lucide-react";
 import { CardItem } from "@/components/cards/CardItem";
 import { CardForm } from "@/components/cards/CardForm";
-import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Card } from "@/types";
 
@@ -45,7 +44,7 @@ export function DaySheet({
   const [loading, setLoading] = useState(true);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
+  const [linked, setLinked] = useState(false);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
 
   useEffect(() => {
@@ -114,8 +113,11 @@ export function DaySheet({
       body: JSON.stringify({ date, expires_in_days: expiryDays }),
     });
     if (!res.ok) return;
-    const { token, expires_at } = await res.json();
-    setShareLinkModal({ url: `${window.location.origin}/share/${token}`, expiresAt: expires_at });
+    const { token } = await res.json();
+    const url = `${window.location.origin}/share/${token}`;
+    await navigator.clipboard.writeText(url);
+    setLinked(true);
+    setTimeout(() => setLinked(false), 2000);
   }
 
   function refresh() {
@@ -157,7 +159,7 @@ export function DaySheet({
               {headerActions}
               {showShareButton && (
                 <button onClick={handleShareDate} className={iconBtn}>
-                  <LinkIcon size={16} />
+                  {linked ? <Check size={16} /> : <LinkIcon size={16} />}
                 </button>
               )}
               {showAddButton && (
@@ -208,14 +210,6 @@ export function DaySheet({
           editCard={editCard}
           onSuccess={() => { setEditCard(null); refresh(); onDataChange?.(); }}
           onCancel={() => setEditCard(null)}
-        />
-      )}
-      {shareLinkModal && (
-        <ShareLinkModal
-          url={shareLinkModal.url}
-          expiresAt={shareLinkModal.expiresAt}
-          onClose={() => setShareLinkModal(null)}
-          isDark={isDark}
         />
       )}
     </>

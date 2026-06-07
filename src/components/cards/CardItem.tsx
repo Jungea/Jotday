@@ -2,12 +2,11 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Pencil, Star, Download, Link, MoreHorizontal, Copy, Loader2 } from "lucide-react";
+import { Trash2, Pencil, Star, Download, Link, MoreHorizontal, Copy, Loader2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useCardActionsStore } from "@/store/cardActions";
-import { ShareLinkModal } from "@/components/cards/ShareLinkModal";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Card } from "@/types";
 
@@ -410,10 +409,10 @@ async function downloadAllCards(card: Card) {
 }
 
 
-function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, onStar, isRep, starColor, starDimColor, starring, onEdit, onDelete, onCopy, copying, deleting, menuDir }: {
+function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, linked, onStar, isRep, starColor, starDimColor, starring, onEdit, onDelete, onCopy, copying, deleting, menuDir }: {
   size: number; btnBg: string; isDark: boolean; p: (id: string) => boolean; order: string[];
   showMore: boolean; setShowMore: (v: boolean | ((prev: boolean) => boolean)) => void;
-  onDownload: () => void; onLink?: () => void; sharing: boolean;
+  onDownload: () => void; onLink?: () => void; sharing: boolean; linked: boolean;
   onStar?: () => void; isRep: boolean; starColor: string; starDimColor: string; starring: boolean;
   onEdit?: () => void; onDelete?: () => void; onCopy?: () => void; copying: boolean; deleting: boolean;
   menuDir: "up" | "down";
@@ -434,9 +433,14 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
   const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
 
   const anyLoading = sharing || copying || starring || deleting;
+  const overflowLoading =
+    (sharing && !p("link") && !!onLink) ||
+    (copying && !p("copy") && !!onCopy) ||
+    (starring && !p("star") && !!onStar) ||
+    (deleting && !p("delete") && !!onDelete);
   const actionMap: Record<string, React.ReactElement | null> = {
     download: !p("download") ? <button key="dl" onClick={() => { setShowMore(false); onDownload(); }} disabled={anyLoading} className={itemClass()}>{sharing ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} 다운로드</button> : null,
-    link:     !p("link") && onLink ? <button key="lk" onClick={() => { setShowMore(false); onLink(); }} disabled={anyLoading} className={itemClass()}>{sharing ? <Loader2 size={13} className="animate-spin" /> : <Link size={13} />} 링크 공유</button> : null,
+    link:     !p("link") && onLink ? <button key="lk" onClick={() => { setShowMore(false); onLink(); }} disabled={anyLoading} className={itemClass(linked)}>{sharing ? <Loader2 size={13} className="animate-spin" /> : linked ? <Check size={13} /> : <Link size={13} />} {linked ? "복사됨" : "링크 공유"}</button> : null,
     star:     !p("star") && onStar ? <button key="st" onClick={() => { setShowMore(false); onStar(); }} disabled={anyLoading} className={itemClass(isRep)}>{starring ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} fill={isRep ? "currentColor" : "none"} />} 대표 설정</button> : null,
     edit:     !p("edit") && onEdit ? <button key="ed" onClick={() => { setShowMore(false); onEdit(); }} disabled={anyLoading} className={itemClass()}><Pencil size={13} /> 수정</button> : null,
     delete:   !p("delete") && onDelete ? <button key="de" onClick={() => { setShowMore(false); onDelete(); }} disabled={anyLoading} className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}>{deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} 삭제</button> : null,
@@ -446,7 +450,7 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
 
   const pinnedMap: Record<string, React.ReactElement | null> = {
     download: p("download") ? <button key="dl" onClick={onDownload} disabled={anyLoading} className={btnClass}>{sharing ? <Loader2 size={size} className="animate-spin" /> : <Download size={size} />}</button> : null,
-    link:     p("link") && onLink ? <button key="lk" onClick={onLink} disabled={anyLoading} className={btnClass}>{sharing ? <Loader2 size={size} className="animate-spin" /> : <Link size={size} />}</button> : null,
+    link:     p("link") && onLink ? <button key="lk" onClick={onLink} disabled={anyLoading} className={`${btnClass} ${linked ? (isDark ? "text-white" : "text-gray-900") : ""}`}>{sharing ? <Loader2 size={size} className="animate-spin" /> : linked ? <Check size={size} /> : <Link size={size} />}</button> : null,
     star:     p("star") && onStar ? <button key="st" onClick={onStar} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow ${isRep ? starColor : starDimColor}`}>{starring ? <Loader2 size={size} className="animate-spin" /> : <Star size={size} fill={isRep ? "currentColor" : "none"} />}</button> : null,
     edit:     p("edit") && onEdit ? <button key="ed" onClick={onEdit} disabled={anyLoading} className={btnClass}><Pencil size={size} /></button> : null,
     delete:   p("delete") && onDelete ? <button key="de" onClick={onDelete} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>{deleting ? <Loader2 size={size} className="animate-spin" /> : <Trash2 size={size} />}</button> : null,
@@ -458,8 +462,8 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
       {order.map((id) => pinnedMap[id])}
       {overflowEls.length > 0 && (
         <div className="relative" ref={containerRef}>
-          <button onClick={handleToggleMore} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-            {anyLoading ? <Loader2 size={size} className="animate-spin" /> : <MoreHorizontal size={size} />}
+          <button onClick={handleToggleMore} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow ${linked ? (isDark ? "text-white" : "text-gray-900") : isDark ? "text-gray-400" : "text-gray-500"}`}>
+            {overflowLoading ? <Loader2 size={size} className="animate-spin" /> : linked ? <Check size={size} /> : <MoreHorizontal size={size} />}
           </button>
           {showMore && (
             <>
@@ -528,11 +532,11 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   const p = (id: string) => pinned.includes(id as never);
   const timeLabel = format(new Date(card.created_at), "HH:mm");
   const [sharing, setSharing] = useState(false);
+  const [linked, setLinked] = useState(false);
   const [copying, setCopying] = useState(false);
   const [starring, setStarring] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showMore, setShowMore] = useState(false);
-  const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   async function handleDownload() {
@@ -569,7 +573,10 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
       });
       const data = await res.json();
       if (data.token) {
-        setShareLinkModal({ url: `${window.location.origin}/share/${data.token}`, expiresAt: data.expires_at });
+        const url = `${window.location.origin}/share/${data.token}`;
+        await navigator.clipboard.writeText(url);
+        setLinked(true);
+        setTimeout(() => setLinked(false), 2000);
       }
     } finally {
       setSharing(false);
@@ -647,7 +654,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
             <div className="flex gap-1 sm:hidden items-center">
               <ActionButtons size={13} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
                 showMore={showMore} setShowMore={setShowMore}
-                onDownload={handleDownload} sharing={sharing}
+                onDownload={handleDownload} sharing={sharing} linked={linked}
                 onLink={shareView ? undefined : handleShareLink}
                 onStar={shareView ? undefined : handleStar}
                 isRep={isRep} starColor={starColor} starDimColor={starDimColor}
@@ -663,7 +670,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
         <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
           <ActionButtons size={14} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
             showMore={showMore} setShowMore={setShowMore}
-            onDownload={handleDownload} sharing={sharing}
+            onDownload={handleDownload} sharing={sharing} linked={linked}
             onLink={shareView ? undefined : handleShareLink}
             onStar={shareView ? undefined : handleStar}
             isRep={isRep} starColor={starColor} starDimColor={starDimColor}
@@ -675,14 +682,6 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
         </div>
       </div>
       </div>
-      {shareLinkModal && (
-        <ShareLinkModal
-          url={shareLinkModal.url}
-          expiresAt={shareLinkModal.expiresAt}
-          onClose={() => setShareLinkModal(null)}
-          isDark={isDark}
-        />
-      )}
       {showDeleteConfirm && (
         <ConfirmModal
           message="카드를 삭제할까요?"
