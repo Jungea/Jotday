@@ -1,9 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type ActionId = "edit" | "delete" | "download" | "link" | "star" | "copy";
+export type ActionId = "edit" | "delete" | "download" | "link" | "star" | "copy" | "move";
 
-export const DEFAULT_ORDER: ActionId[] = ["edit", "delete", "download", "link", "star", "copy"];
+export const DEFAULT_ORDER: ActionId[] = ["edit", "delete", "download", "link", "star", "copy", "move"];
 
 export const ACTION_LABELS: Record<ActionId, string> = {
   edit:     "수정",
@@ -12,6 +12,7 @@ export const ACTION_LABELS: Record<ActionId, string> = {
   link:     "링크 공유",
   star:     "대표 설정",
   copy:     "복사",
+  move:     "날짜 이동",
 };
 
 interface CardActionsState {

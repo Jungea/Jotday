@@ -95,6 +95,11 @@ export function DaySheet({
     }
   }
 
+  function handleMove(id: string) {
+    setCards((prev) => prev.filter((c) => c.id !== id));
+    onDataChange?.();
+  }
+
   async function handleSetRepresentative(id: string) {
     const fd = new FormData();
     fd.append("id", id);
@@ -188,6 +193,7 @@ export function DaySheet({
                       isDark={isDark}
                       onDelete={handleDelete}
                       onEdit={setEditCard}
+                      onMove={handleMove}
                       onSetRepresentative={handleSetRepresentative}
                     />
                   </div>

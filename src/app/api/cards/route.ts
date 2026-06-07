@@ -225,6 +225,25 @@ export async function PATCH(request: NextRequest) {
   const id = formData.get("id") as string;
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
+  // 날짜 이동
+  const moveToDate = formData.get("move_to_date") as string | null;
+  if (moveToDate) {
+    const { data: orig } = await supabase.from("cards").select("created_at").eq("id", id).eq("user_id", user.id).single();
+    const origDate = orig ? new Date(orig.created_at) : new Date();
+    const created_at = new Date(
+      `${moveToDate}T${String(origDate.getUTCHours()).padStart(2, "0")}:${String(origDate.getUTCMinutes()).padStart(2, "0")}:${String(origDate.getUTCSeconds()).padStart(2, "0")}Z`
+    ).toISOString();
+    const { data, error } = await supabase
+      .from("cards")
+      .update({ date: moveToDate, created_at })
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
   // 대표 카드 설정 (별도 처리)
   if (formData.get("set_representative") === "true") {
     const { data: card } = await supabase

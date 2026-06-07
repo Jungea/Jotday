@@ -44,6 +44,10 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     setCards((prev) => prev.filter((c) => c.id !== id));
   }
 
+  function handleMove(id: string) {
+    setCards((prev) => prev.filter((c) => c.id !== id));
+  }
+
   function handleSetRepresentative(id: string) {
     setCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
   }
@@ -130,7 +134,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             {cards.map((card) => (
               <div key={card.id} className="w-full max-w-sm">
-                <CardItem card={card} isDark={isDark} onDelete={handleDelete} onEdit={handleEdit} onCopy={handleCopy} onSetRepresentative={handleSetRepresentative} />
+                <CardItem card={card} isDark={isDark} onDelete={handleDelete} onEdit={handleEdit} onCopy={handleCopy} onMove={handleMove} onSetRepresentative={handleSetRepresentative} />
               </div>
             ))}
           </div>

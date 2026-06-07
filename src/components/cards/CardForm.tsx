@@ -158,7 +158,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       formData.append("date", date);
       formData.append("type", cardType);
       if (content) formData.append("content", content);
-      if (manualTime && time) formData.append("time", new Date(`${date}T${time}:00`).toISOString());
+      formData.append("time", new Date(`${date}T${manualTime ? time : format(new Date(), "HH:mm")}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
       for (const s of newSlots) formData.append("image", s.file);
       const res = await fetch("/api/cards", { method: "POST", body: formData });

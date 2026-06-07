@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Pencil, Star, Download, Link, MoreHorizontal, Copy, Loader2, Check } from "lucide-react";
+import { Trash2, Pencil, Star, Download, Link, MoreHorizontal, Copy, Loader2, Check, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
@@ -16,6 +16,7 @@ interface CardItemProps {
   onDelete?: (id: string) => void;
   onEdit?: (card: Card) => void;
   onCopy?: (newCardId: string) => void;
+  onMove?: (id: string) => void;
   onSetRepresentative?: (id: string) => void;
   shareView?: boolean;
   disableLightbox?: boolean;
@@ -409,12 +410,13 @@ async function downloadAllCards(card: Card) {
 }
 
 
-function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, linked, onStar, isRep, starColor, starDimColor, starring, onEdit, onDelete, onCopy, copying, deleting, menuDir }: {
+function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, linked, onStar, isRep, starColor, starDimColor, starring, onEdit, onDelete, onCopy, copying, onMoveClick, moving, deleting, menuDir }: {
   size: number; btnBg: string; isDark: boolean; p: (id: string) => boolean; order: string[];
   showMore: boolean; setShowMore: (v: boolean | ((prev: boolean) => boolean)) => void;
   onDownload: () => void; onLink?: () => void; sharing: boolean; linked: boolean;
   onStar?: () => void; isRep: boolean; starColor: string; starDimColor: string; starring: boolean;
-  onEdit?: () => void; onDelete?: () => void; onCopy?: () => void; copying: boolean; deleting: boolean;
+  onEdit?: () => void; onDelete?: () => void; onCopy?: () => void; copying: boolean;
+  onMoveClick?: () => void; moving: boolean; deleting: boolean;
   menuDir: "up" | "down";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -432,12 +434,13 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
   const itemClass = (active?: boolean) => `w-full flex items-center gap-2.5 px-3 py-2 text-xs ${active ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50")}`;
   const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
 
-  const anyLoading = sharing || copying || starring || deleting;
+  const anyLoading = sharing || copying || starring || deleting || moving;
   const overflowLoading =
     (sharing && !p("link") && !!onLink) ||
     (copying && !p("copy") && !!onCopy) ||
     (starring && !p("star") && !!onStar) ||
-    (deleting && !p("delete") && !!onDelete);
+    (deleting && !p("delete") && !!onDelete) ||
+    (moving && !p("move") && !!onMoveClick);
   const actionMap: Record<string, React.ReactElement | null> = {
     download: !p("download") ? <button key="dl" onClick={() => { setShowMore(false); onDownload(); }} disabled={anyLoading} className={itemClass()}>{sharing ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} 다운로드</button> : null,
     link:     !p("link") && onLink ? <button key="lk" onClick={() => { setShowMore(false); onLink(); }} disabled={anyLoading} className={itemClass(linked)}>{sharing ? <Loader2 size={13} className="animate-spin" /> : linked ? <Check size={13} /> : <Link size={13} />} {linked ? "복사됨" : "링크 공유"}</button> : null,
@@ -445,6 +448,7 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
     edit:     !p("edit") && onEdit ? <button key="ed" onClick={() => { setShowMore(false); onEdit(); }} disabled={anyLoading} className={itemClass()}><Pencil size={13} /> 수정</button> : null,
     delete:   !p("delete") && onDelete ? <button key="de" onClick={() => { setShowMore(false); onDelete(); }} disabled={anyLoading} className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}>{deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} 삭제</button> : null,
     copy:     !p("copy") && onCopy ? <button key="cp" onClick={() => { setShowMore(false); onCopy(); }} disabled={anyLoading} className={itemClass()}>{copying ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />} {copying ? "복사 중..." : "복사"}</button> : null,
+    move:     !p("move") && onMoveClick ? <button key="mv" onClick={() => { setShowMore(false); onMoveClick(); }} disabled={anyLoading} className={itemClass()}>{moving ? <Loader2 size={13} className="animate-spin" /> : <CalendarDays size={13} />} {moving ? "이동 중..." : "날짜 이동"}</button> : null,
   };
   const overflowEls = order.map((id) => actionMap[id]).filter(Boolean) as React.ReactElement[];
 
@@ -455,6 +459,7 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
     edit:     p("edit") && onEdit ? <button key="ed" onClick={onEdit} disabled={anyLoading} className={btnClass}><Pencil size={size} /></button> : null,
     delete:   p("delete") && onDelete ? <button key="de" onClick={onDelete} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>{deleting ? <Loader2 size={size} className="animate-spin" /> : <Trash2 size={size} />}</button> : null,
     copy:     p("copy") && onCopy ? <button key="cp" onClick={onCopy} disabled={anyLoading} className={btnClass}>{copying ? <Loader2 size={size} className="animate-spin" /> : <Copy size={size} />}</button> : null,
+    move:     p("move") && onMoveClick ? <button key="mv" onClick={onMoveClick} disabled={anyLoading} className={btnClass}>{moving ? <Loader2 size={size} className="animate-spin" /> : <CalendarDays size={size} />}</button> : null,
   };
 
   return (
@@ -524,7 +529,7 @@ function ExpandableContent({ text, className, isDark }: { text: string; classNam
   );
 }
 
-export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, onSetRepresentative, shareView, disableLightbox }: CardItemProps) {
+export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, onMove, onSetRepresentative, shareView, disableLightbox }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isDark = isDarkProp ?? theme === "dark";
   const { expiryDays } = useShareSettingsStore();
@@ -536,6 +541,9 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   const [copying, setCopying] = useState(false);
   const [starring, setStarring] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveTargetDate, setMoveTargetDate] = useState(card.date);
   const [showMore, setShowMore] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -593,6 +601,20 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
       if (res.ok) onSetRepresentative?.(card.id);
     } finally {
       setStarring(false);
+    }
+  }
+
+  async function handleMove() {
+    setMoving(true);
+    setShowMoveModal(false);
+    try {
+      const fd = new FormData();
+      fd.append("id", card.id);
+      fd.append("move_to_date", moveTargetDate);
+      const res = await fetch("/api/cards", { method: "PATCH", body: fd });
+      if (res.ok) onMove?.(card.id);
+    } finally {
+      setMoving(false);
     }
   }
 
@@ -660,7 +682,9 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
                 isRep={isRep} starColor={starColor} starDimColor={starDimColor}
                 onEdit={onEdit ? () => onEdit(card) : undefined}
                 onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
-                onCopy={onCopy ? handleCopy : undefined} copying={copying} starring={starring} deleting={deleting}
+                onCopy={onCopy ? handleCopy : undefined} copying={copying}
+                onMoveClick={onMove ? () => setShowMoveModal(true) : undefined} moving={moving}
+                starring={starring} deleting={deleting}
                 menuDir="up"
               />
             </div>
@@ -676,12 +700,43 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
             isRep={isRep} starColor={starColor} starDimColor={starDimColor}
             onEdit={onEdit ? () => onEdit(card) : undefined}
             onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
-            onCopy={onCopy ? handleCopy : undefined} copying={copying} starring={starring} deleting={deleting}
+            onCopy={onCopy ? handleCopy : undefined} copying={copying}
+            onMoveClick={onMove ? () => setShowMoveModal(true) : undefined} moving={moving}
+            starring={starring} deleting={deleting}
             menuDir="down"
           />
         </div>
       </div>
       </div>
+      {showMoveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className={`rounded-2xl p-5 w-72 shadow-xl ${isDark ? "bg-[#1c1c1c]" : "bg-white"}`}>
+            <h3 className={`font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>날짜 이동</h3>
+            <input
+              type="date"
+              value={moveTargetDate}
+              onChange={(e) => setMoveTargetDate(e.target.value)}
+              onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (_) {} }}
+              className={`w-full border rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowMoveModal(false); setMoveTargetDate(card.date); }}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium ${isDark ? "bg-gray-800 text-gray-200 hover:bg-gray-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleMove}
+                disabled={!moveTargetDate || moveTargetDate === card.date}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium disabled:opacity-40 ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
+              >
+                이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showDeleteConfirm && (
         <ConfirmModal
           message="카드를 삭제할까요?"
