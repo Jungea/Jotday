@@ -184,20 +184,26 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
   function handleRotate() {
     const img = imgRef.current;
     if (!img) return;
+    const MAX = 1600;
+    const sw = img.naturalWidth;
+    const sh = img.naturalHeight;
+    const scale = Math.min(1, MAX / Math.max(sw, sh));
     const canvas = document.createElement("canvas");
-    canvas.width = img.naturalHeight;
-    canvas.height = img.naturalWidth;
+    canvas.width = Math.round(sh * scale);
+    canvas.height = Math.round(sw * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate(Math.PI / 2);
-    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    ctx.drawImage(img, -(sw * scale) / 2, -(sh * scale) / 2, sw * scale, sh * scale);
     canvas.toBlob((blob) => {
       if (!blob) return;
+      blobUrls.current.forEach(URL.revokeObjectURL);
+      blobUrls.current = [];
       const url = URL.createObjectURL(blob);
       blobUrls.current.push(url);
       setCurrentSrc(url);
-    }, "image/jpeg", 0.95);
+    }, "image/jpeg", 0.9);
   }
 
   function toggleLock() {

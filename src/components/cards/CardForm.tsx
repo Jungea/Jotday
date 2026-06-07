@@ -63,7 +63,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     for (const file of files) {
       try {
         const compressed = await imageCompression(file, {
-          maxWidthOrHeight: 2400,
+          maxWidthOrHeight: 1600,
+          maxSizeMB: 2,
           useWebWorker: true,
           fileType: "image/jpeg",
           initialQuality: 0.85,
