@@ -41,23 +41,23 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     fetchCards();
   }, [fetchCards]);
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
-    if (res.ok) setCards((prev) => prev.filter((c) => c.id !== id));
+  function handleDelete(id: string) {
+    setCards((prev) => prev.filter((c) => c.id !== id));
   }
 
-  async function handleSetRepresentative(id: string) {
-    const formData = new FormData();
-    formData.append("id", id);
-    formData.append("set_representative", "true");
-    const res = await fetch("/api/cards", { method: "PATCH", body: formData });
-    if (res.ok) {
-      setCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
-    }
+  function handleSetRepresentative(id: string) {
+    setCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
   }
 
   function handleEdit(card: Card) {
     setEditCard(card);
+  }
+
+  async function handleCopy(newCardId: string) {
+    await fetchCards();
+    setTimeout(() => {
+      document.getElementById(`card-${newCardId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
   }
 
   async function handleShareDate() {
@@ -129,7 +129,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             {cards.map((card) => (
               <div key={card.id} className="w-full max-w-sm">
-                <CardItem card={card} isDark={isDark} onDelete={handleDelete} onEdit={handleEdit} onSetRepresentative={handleSetRepresentative} />
+                <CardItem card={card} isDark={isDark} onDelete={handleDelete} onEdit={handleEdit} onCopy={handleCopy} onSetRepresentative={handleSetRepresentative} />
               </div>
             ))}
           </div>

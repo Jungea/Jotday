@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Pencil, Star, Download, Link, MoreHorizontal } from "lucide-react";
+import { Trash2, Pencil, Star, Download, Link, MoreHorizontal, Copy, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
@@ -16,6 +16,7 @@ interface CardItemProps {
   isDark?: boolean;
   onDelete?: (id: string) => void;
   onEdit?: (card: Card) => void;
+  onCopy?: (newCardId: string) => void;
   onSetRepresentative?: (id: string) => void;
   shareView?: boolean;
   disableLightbox?: boolean;
@@ -506,12 +507,12 @@ async function downloadAllCards(card: Card, isDark: boolean) {
 }
 
 
-function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, onStar, isRep, starColor, starDimColor, onEdit, onDelete, menuDir }: {
+function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, onDownload, onLink, sharing, onStar, isRep, starColor, starDimColor, starring, onEdit, onDelete, onCopy, copying, deleting, menuDir }: {
   size: number; btnBg: string; isDark: boolean; p: (id: string) => boolean; order: string[];
   showMore: boolean; setShowMore: (v: boolean | ((prev: boolean) => boolean)) => void;
   onDownload: () => void; onLink?: () => void; sharing: boolean;
-  onStar?: () => void; isRep: boolean; starColor: string; starDimColor: string;
-  onEdit?: () => void; onDelete?: () => void;
+  onStar?: () => void; isRep: boolean; starColor: string; starDimColor: string; starring: boolean;
+  onEdit?: () => void; onDelete?: () => void; onCopy?: () => void; copying: boolean; deleting: boolean;
   menuDir: "up" | "down";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -529,21 +530,24 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
   const itemClass = (active?: boolean) => `w-full flex items-center gap-2.5 px-3 py-2 text-xs ${active ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50")}`;
   const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
 
+  const anyLoading = sharing || copying || starring || deleting;
   const actionMap: Record<string, React.ReactElement | null> = {
-    download: !p("download") ? <button key="dl" onClick={() => { setShowMore(false); onDownload(); }} disabled={sharing} className={itemClass()}><Download size={13} /> 다운로드</button> : null,
-    link:     !p("link") && onLink ? <button key="lk" onClick={() => { setShowMore(false); onLink(); }} className={itemClass()}><Link size={13} /> 링크 공유</button> : null,
-    star:     !p("star") && onStar ? <button key="st" onClick={() => { setShowMore(false); onStar(); }} className={itemClass(isRep)}><Star size={13} fill={isRep ? "currentColor" : "none"} /> 대표 설정</button> : null,
-    edit:     !p("edit") && onEdit   ? <button key="ed" onClick={() => { setShowMore(false); onEdit(); }} className={itemClass()}><Pencil size={13} /> 수정</button> : null,
-    delete:   !p("delete") && onDelete ? <button key="de" onClick={() => { setShowMore(false); onDelete(); }} className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}><Trash2 size={13} /> 삭제</button> : null,
+    download: !p("download") ? <button key="dl" onClick={() => { setShowMore(false); onDownload(); }} disabled={anyLoading} className={itemClass()}>{sharing ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} 다운로드</button> : null,
+    link:     !p("link") && onLink ? <button key="lk" onClick={() => { setShowMore(false); onLink(); }} disabled={anyLoading} className={itemClass()}>{sharing ? <Loader2 size={13} className="animate-spin" /> : <Link size={13} />} 링크 공유</button> : null,
+    star:     !p("star") && onStar ? <button key="st" onClick={() => { setShowMore(false); onStar(); }} disabled={anyLoading} className={itemClass(isRep)}>{starring ? <Loader2 size={13} className="animate-spin" /> : <Star size={13} fill={isRep ? "currentColor" : "none"} />} 대표 설정</button> : null,
+    edit:     !p("edit") && onEdit ? <button key="ed" onClick={() => { setShowMore(false); onEdit(); }} disabled={anyLoading} className={itemClass()}><Pencil size={13} /> 수정</button> : null,
+    delete:   !p("delete") && onDelete ? <button key="de" onClick={() => { setShowMore(false); onDelete(); }} disabled={anyLoading} className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-red-400 ${isDark ? "hover:bg-gray-700" : "hover:bg-gray-50"}`}>{deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} 삭제</button> : null,
+    copy:     !p("copy") && onCopy ? <button key="cp" onClick={() => { setShowMore(false); onCopy(); }} disabled={anyLoading} className={itemClass()}>{copying ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />} {copying ? "복사 중..." : "복사"}</button> : null,
   };
   const overflowEls = order.map((id) => actionMap[id]).filter(Boolean) as React.ReactElement[];
 
   const pinnedMap: Record<string, React.ReactElement | null> = {
-    download: p("download") ? <button key="dl" onClick={onDownload} disabled={sharing} className={btnClass}><Download size={size} /></button> : null,
-    link:     p("link") && onLink ? <button key="lk" onClick={onLink} className={btnClass}><Link size={size} /></button> : null,
-    star:     p("star") && onStar ? <button key="st" onClick={onStar} className={`${btnBg} rounded-full p-1.5 shadow ${isRep ? starColor : starDimColor}`}><Star size={size} fill={isRep ? "currentColor" : "none"} /></button> : null,
-    edit:     p("edit") && onEdit   ? <button key="ed" onClick={onEdit} className={btnClass}><Pencil size={size} /></button> : null,
-    delete:   p("delete") && onDelete ? <button key="de" onClick={onDelete} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}><Trash2 size={size} /></button> : null,
+    download: p("download") ? <button key="dl" onClick={onDownload} disabled={anyLoading} className={btnClass}>{sharing ? <Loader2 size={size} className="animate-spin" /> : <Download size={size} />}</button> : null,
+    link:     p("link") && onLink ? <button key="lk" onClick={onLink} disabled={anyLoading} className={btnClass}>{sharing ? <Loader2 size={size} className="animate-spin" /> : <Link size={size} />}</button> : null,
+    star:     p("star") && onStar ? <button key="st" onClick={onStar} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow ${isRep ? starColor : starDimColor}`}>{starring ? <Loader2 size={size} className="animate-spin" /> : <Star size={size} fill={isRep ? "currentColor" : "none"} />}</button> : null,
+    edit:     p("edit") && onEdit ? <button key="ed" onClick={onEdit} disabled={anyLoading} className={btnClass}><Pencil size={size} /></button> : null,
+    delete:   p("delete") && onDelete ? <button key="de" onClick={onDelete} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow text-red-400 hover:text-red-600`}>{deleting ? <Loader2 size={size} className="animate-spin" /> : <Trash2 size={size} />}</button> : null,
+    copy:     p("copy") && onCopy ? <button key="cp" onClick={onCopy} disabled={anyLoading} className={btnClass}>{copying ? <Loader2 size={size} className="animate-spin" /> : <Copy size={size} />}</button> : null,
   };
 
   return (
@@ -551,8 +555,8 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
       {order.map((id) => pinnedMap[id])}
       {overflowEls.length > 0 && (
         <div className="relative" ref={containerRef}>
-          <button onClick={handleToggleMore} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-            <MoreHorizontal size={size} />
+          <button onClick={handleToggleMore} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+            {anyLoading ? <Loader2 size={size} className="animate-spin" /> : <MoreHorizontal size={size} />}
           </button>
           {showMore && (
             <>
@@ -613,7 +617,7 @@ function ExpandableContent({ text, className, isDark }: { text: string; classNam
   );
 }
 
-export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepresentative, shareView, disableLightbox }: CardItemProps) {
+export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, onSetRepresentative, shareView, disableLightbox }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isDark = isDarkProp ?? theme === "dark";
   const { expiryDays } = useShareSettingsStore();
@@ -621,6 +625,9 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
   const p = (id: string) => pinned.includes(id as never);
   const timeLabel = format(new Date(card.created_at), "HH:mm");
   const [sharing, setSharing] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [starring, setStarring] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -633,6 +640,21 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
     setSharing(false);
   }
 
+  async function handleCopy() {
+    setCopying(true);
+    try {
+      const formData = new FormData();
+      formData.append("copy_from", card.id);
+      formData.append("date", card.date);
+      const res = await fetch("/api/cards", { method: "POST", body: formData });
+      if (res.ok) {
+        const newCard = await res.json();
+        onCopy?.(newCard.id);
+      }
+    } finally {
+      setCopying(false);
+    }
+  }
 
   async function handleShareLink() {
     setSharing(true);
@@ -648,6 +670,30 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
       }
     } finally {
       setSharing(false);
+    }
+  }
+
+  async function handleStarClick() {
+    setStarring(true);
+    try {
+      const formData = new FormData();
+      formData.append("id", card.id);
+      formData.append("set_representative", "true");
+      const res = await fetch("/api/cards", { method: "PATCH", body: formData });
+      if (res.ok) onSetRepresentative?.(card.id);
+    } finally {
+      setStarring(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    setShowDeleteConfirm(false);
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/cards?id=${card.id}`, { method: "DELETE" });
+      if (res.ok) onDelete?.(card.id);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -668,13 +714,13 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
     : "";
 
   const hasImages = images.length > 0;
-  const handleStar = onSetRepresentative && hasImages ? () => onSetRepresentative(card.id) : undefined;
+  const handleStar = onSetRepresentative && hasImages ? handleStarClick : undefined;
   const effectiveOrder = (shareView ? ["download"] : order).filter((id) => id !== "download" || hasImages);
   const effectiveP = shareView ? () => true : p;
 
   return (
     <>
-      <div className={`rounded-xl ${repGlow}`}>
+      <div id={`card-${card.id}`} className={`rounded-xl ${repGlow}`}>
       <div className={`relative rounded-xl group ${
         isDark
           ? "bg-[#1c1c1c] border border-gray-800 shadow-none"
@@ -704,6 +750,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
                 isRep={isRep} starColor={starColor} starDimColor={starDimColor}
                 onEdit={onEdit ? () => onEdit(card) : undefined}
                 onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
+                onCopy={onCopy ? handleCopy : undefined} copying={copying} starring={starring} deleting={deleting}
                 menuDir="up"
               />
             </div>
@@ -719,6 +766,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
             isRep={isRep} starColor={starColor} starDimColor={starDimColor}
             onEdit={onEdit ? () => onEdit(card) : undefined}
             onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
+            onCopy={onCopy ? handleCopy : undefined} copying={copying} starring={starring} deleting={deleting}
             menuDir="down"
           />
         </div>
@@ -735,7 +783,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onSetRepr
       {showDeleteConfirm && (
         <ConfirmModal
           message="카드를 삭제할까요?"
-          onConfirm={() => { setShowDeleteConfirm(false); onDelete!(card.id); }}
+          onConfirm={handleDeleteConfirm}
           onCancel={() => setShowDeleteConfirm(false)}
           isDark={isDark}
         />

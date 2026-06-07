@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useThemeStore } from "@/store/theme";
-import { useCardActionsStore } from "@/store/cardActions";
+import { useCardActionsStore, DEFAULT_ORDER, type ActionId } from "@/store/cardActions";
 import { useFeedPresetsStore } from "@/store/feedPresets";
 import { useShareSettingsStore } from "@/store/shareSettings";
 
@@ -44,11 +44,14 @@ export function SettingsSync() {
       .then((data) => {
         if (data) {
           if (data.theme) useThemeStore.getState().setTheme(data.theme);
-          if (data.card_actions?.order)
+          if (data.card_actions?.order) {
+            const saved: ActionId[] = data.card_actions.order;
+            const missing = DEFAULT_ORDER.filter((id) => !saved.includes(id));
             useCardActionsStore.setState({
-              order: data.card_actions.order,
+              order: missing.length > 0 ? [...saved, ...missing] : saved,
               pinned: data.card_actions.pinned,
             });
+          }
           if (data.feed_presets?.presets)
             useFeedPresetsStore.setState({ presets: data.feed_presets.presets });
           if (data.share_settings !== undefined && data.share_settings !== null) {

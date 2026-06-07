@@ -123,6 +123,60 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const formData = await request.formData();
+
+  const copyFrom = formData.get("copy_from") as string | null;
+  if (copyFrom) {
+    const copyDate = formData.get("date") as string;
+    const { data: original, error: fetchErr } = await supabase
+      .from("cards")
+      .select("*")
+      .eq("id", copyFrom)
+      .eq("user_id", user.id)
+      .single();
+    if (fetchErr || !original) return NextResponse.json({ error: "Card not found" }, { status: 404 });
+
+    const srcImages: { url: string; public_id: string }[] =
+      original.images?.length > 0
+        ? original.images
+        : original.image_url
+          ? [{ url: original.image_url, public_id: original.image_public_id }]
+          : [];
+
+    const newImages: { url: string; public_id: string }[] = [];
+    for (const img of srcImages) {
+      try {
+        const res = await fetch(img.url);
+        const buffer = Buffer.from(await res.arrayBuffer());
+        const dataUri = `data:${res.headers.get("content-type") ?? "image/jpeg"};base64,${buffer.toString("base64")}`;
+        const uploaded = await uploadImage(dataUri, user.id);
+        newImages.push(uploaded);
+      } catch {
+        // 원본 이미지를 가져올 수 없으면 건너뜀
+      }
+    }
+
+    const orig = new Date(original.created_at);
+    orig.setSeconds(orig.getSeconds() + 1);
+    const created_at = new Date(
+      `${copyDate}T${String(orig.getUTCHours()).padStart(2, "0")}:${String(orig.getUTCMinutes()).padStart(2, "0")}:${String(orig.getUTCSeconds()).padStart(2, "0")}Z`
+    ).toISOString();
+
+    const { data, error } = await supabase.from("cards").insert({
+      user_id: user.id,
+      date: copyDate,
+      type: original.type,
+      title: original.title,
+      content: original.content,
+      image_url: newImages[0]?.url ?? null,
+      image_public_id: newImages[0]?.public_id ?? null,
+      images: newImages,
+      tags: original.tags,
+      created_at,
+    }).select().single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data, { status: 201 });
+  }
+
   const date = formData.get("date") as string;
   const type = formData.get("type") as string;
   const title = formData.get("title") as string | null;
