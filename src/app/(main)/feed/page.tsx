@@ -99,6 +99,10 @@ export default function FeedPage() {
   const [modalEditCard, setModalEditCard] = useState<Card | null>(null);
   const [modalShowForm, setModalShowForm] = useState(false);
   const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
+  const [modalExpanded, setModalExpanded] = useState(false);
+  const [modalDragY, setModalDragY] = useState(0);
+  const [modalIsDragging, setModalIsDragging] = useState(false);
+  const modalStartY = useRef(0);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -179,7 +183,31 @@ export default function FeedPage() {
     return () => { if (el) observer.unobserve(el); };
   }, [hasMore, loading, fetchPage]);
 
+  function onHandlePointerDown(e: React.PointerEvent) {
+    setModalIsDragging(true);
+    modalStartY.current = e.clientY;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onHandlePointerMove(e: React.PointerEvent) {
+    if (!modalIsDragging) return;
+    const dy = e.clientY - modalStartY.current;
+    setModalDragY(modalExpanded ? Math.max(0, dy) : Math.max(-100, dy));
+  }
+  function onHandlePointerUp(e: React.PointerEvent) {
+    if (!modalIsDragging) return;
+    setModalIsDragging(false);
+    const dy = e.clientY - modalStartY.current;
+    setModalDragY(0);
+    if (modalExpanded) {
+      if (dy > 150) setModalExpanded(false);
+    } else {
+      if (dy < -80) setModalExpanded(true);
+      else if (dy > 120) setModalDate(null);
+    }
+  }
+
   async function openModal(date: string, scrollToId?: string) {
+    setModalExpanded(false);
     setModalDate(date);
     setModalCards([]);
     setModalScrollToId(scrollToId ?? null);
@@ -348,10 +376,24 @@ export default function FeedPage() {
       {/* 날짜 카드 모달 */}
       {modalDate && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setModalDate(null)} />
-          <div className={`relative rounded-t-2xl flex flex-col h-[75dvh] ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
+          <div className="absolute inset-0 bg-black/50" onClick={() => { setModalDate(null); setModalExpanded(false); }} />
+          <div
+            className={`relative flex flex-col ${modalExpanded ? "h-dvh rounded-none" : "h-[75dvh] rounded-t-2xl"} ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}
+            style={{
+              transform: `translateY(${modalDragY}px)`,
+              transition: modalIsDragging ? "none" : "transform 0.25s ease, height 0.25s ease, border-radius 0.25s ease",
+            }}
+          >
             {/* Handle */}
-            <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mt-3 mb-1 shrink-0" />
+            <div
+              className="flex justify-center py-3 shrink-0 cursor-grab active:cursor-grabbing touch-none"
+              onPointerDown={onHandlePointerDown}
+              onPointerMove={onHandlePointerMove}
+              onPointerUp={onHandlePointerUp}
+              onPointerLeave={onHandlePointerUp}
+            >
+              <div className="w-10 h-1 rounded-full bg-gray-400/40" />
+            </div>
 
             {/* Header */}
             <div className={`flex items-center justify-between px-4 py-3 shrink-0 border-b ${isDark ? "border-gray-800" : "border-gray-100"}`}>
@@ -378,7 +420,7 @@ export default function FeedPage() {
                   <Plus size={16} />
                 </button>
                 <button
-                  onClick={() => setModalDate(null)}
+                  onClick={() => { setModalDate(null); setModalExpanded(false); }}
                   className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
                 >
                   <X size={16} />

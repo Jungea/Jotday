@@ -20,7 +20,8 @@ import {
 import { ko } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useThemeStore } from "@/store/theme";
-import type { DayMeta } from "@/types";
+import { CardItem } from "@/components/cards/CardItem";
+import type { DayMeta, Card } from "@/types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -38,6 +39,15 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
   const [showJump, setShowJump] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const [jumpDragY, setJumpDragY] = useState(0);
+  const [jumpIsDragging, setJumpIsDragging] = useState(false);
+  const jumpStartY = useRef(0);
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const [sheetIsDragging, setSheetIsDragging] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const sheetStartY = useRef(0);
+  const [sheetCards, setSheetCards] = useState<Card[]>([]);
+  const [sheetCardsLoading, setSheetCardsLoading] = useState(false);
 
   useEffect(() => {
     if (initialMonth) setCurrent(parse(initialMonth, "yyyy-MM", new Date()));
@@ -54,9 +64,59 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
     return () => document.removeEventListener("click", handleClick);
   }, [selectedDay]);
 
+  useEffect(() => {
+    if (!sheetExpanded || !selectedDay) return;
+    setSheetCardsLoading(true);
+    fetch(`/api/cards?date=${selectedDay}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Card[]) => {
+        setSheetCards(data);
+        setSheetCardsLoading(false);
+      });
+  }, [sheetExpanded, selectedDay]);
+
   const currentYear = current.getFullYear();
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  function onJumpPointerDown(e: React.PointerEvent) {
+    setJumpIsDragging(true);
+    jumpStartY.current = e.clientY;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onJumpPointerMove(e: React.PointerEvent) {
+    if (!jumpIsDragging) return;
+    setJumpDragY(Math.max(0, e.clientY - jumpStartY.current));
+  }
+  function onJumpPointerUp(e: React.PointerEvent) {
+    if (!jumpIsDragging) return;
+    setJumpIsDragging(false);
+    if (e.clientY - jumpStartY.current > 120) setShowJump(false);
+    setJumpDragY(0);
+  }
+
+  function onSheetPointerDown(e: React.PointerEvent) {
+    setSheetIsDragging(true);
+    sheetStartY.current = e.clientY;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onSheetPointerMove(e: React.PointerEvent) {
+    if (!sheetIsDragging) return;
+    const dy = e.clientY - sheetStartY.current;
+    setSheetDragY(sheetExpanded ? Math.max(0, dy) : Math.max(-100, dy));
+  }
+  function onSheetPointerUp(e: React.PointerEvent) {
+    if (!sheetIsDragging) return;
+    setSheetIsDragging(false);
+    const dy = e.clientY - sheetStartY.current;
+    setSheetDragY(0);
+    if (sheetExpanded) {
+      if (dy > 150) setSheetExpanded(false);
+    } else {
+      if (dy < -80) setSheetExpanded(true);
+      else if (dy > 120) setSelectedDay(null);
+    }
+  }
 
   function handleJump(year: number, month: number) {
     const next = new Date(year, month - 1, 1);
@@ -208,8 +268,22 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
       {showJump && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowJump(false)} />
-          <div className={`relative rounded-t-2xl px-5 pt-4 pb-10 ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}>
-            <div className="w-10 h-1 rounded-full bg-gray-400/40 mx-auto mb-5" />
+          <div
+            className={`relative rounded-t-2xl px-5 pt-4 pb-10 ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}
+            style={{
+              transform: `translateY(${jumpDragY}px)`,
+              transition: jumpIsDragging ? "none" : "transform 0.25s ease",
+            }}
+          >
+            <div
+              className="flex justify-center py-1 mb-4 cursor-grab active:cursor-grabbing touch-none"
+              onPointerDown={onJumpPointerDown}
+              onPointerMove={onJumpPointerMove}
+              onPointerUp={onJumpPointerUp}
+              onPointerLeave={onJumpPointerUp}
+            >
+              <div className="w-10 h-1 rounded-full bg-gray-400/40" />
+            </div>
 
             {/* 연도 선택 */}
             <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none mb-4">
@@ -251,8 +325,24 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
       {/* 모바일 바텀 시트 */}
       {selectedDay && (
         <>
-          <div ref={sheetRef} className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden rounded-t-2xl shadow-xl p-5 ${isDark ? "bg-[#1c1c1c] border-t border-gray-800" : "bg-white border-t border-gray-200"}`}>
-            <div className="flex items-center justify-between mb-4">
+          <div
+            ref={sheetRef}
+            className={`fixed bottom-0 left-0 right-0 z-50 sm:hidden shadow-xl flex flex-col ${sheetExpanded ? "h-dvh rounded-none" : "rounded-t-2xl"} ${isDark ? "bg-[#1c1c1c] border-t border-gray-800" : "bg-white border-t border-gray-200"}`}
+            style={{
+              transform: `translateY(${sheetDragY}px)`,
+              transition: sheetIsDragging ? "none" : "transform 0.25s ease, height 0.25s ease, border-radius 0.25s ease",
+            }}
+          >
+            <div
+              className="flex justify-center py-3 cursor-grab active:cursor-grabbing touch-none shrink-0"
+              onPointerDown={onSheetPointerDown}
+              onPointerMove={onSheetPointerMove}
+              onPointerUp={onSheetPointerUp}
+              onPointerLeave={onSheetPointerUp}
+            >
+              <div className="w-10 h-1 rounded-full bg-gray-400/40" />
+            </div>
+            <div className="flex items-center justify-between px-5 pb-3 shrink-0">
               <span className={`font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>
                 {format(new Date(selectedDay), "M월 d일 (EEE)", { locale: ko })}
                 {selectedMeta && selectedMeta.count > 0 && (
@@ -261,23 +351,55 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth }: Calendar
                   </span>
                 )}
               </span>
-              <button onClick={() => setSelectedDay(null)} className={isDark ? "text-gray-500" : "text-gray-400"}>
+              <button onClick={() => { setSelectedDay(null); setSheetExpanded(false); }} className={isDark ? "text-gray-500" : "text-gray-400"}>
                 <X size={20} />
               </button>
             </div>
 
-            {selectedMeta?.preview_image ? (
-              <button onClick={() => router.push(`/${selectedDay}`)} className="w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={selectedMeta.preview_image} alt="" className="w-full h-56 object-cover rounded-xl" />
-              </button>
+            {sheetExpanded ? (
+              <div className="overflow-y-auto flex-1 px-5 pb-5">
+                {sheetCardsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className={`w-7 h-7 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
+                  </div>
+                ) : sheetCards.length === 0 ? (
+                  <button
+                    onClick={() => router.push(`/${selectedDay}`)}
+                    className={`w-full py-10 rounded-xl flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
+                  >
+                    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>탭해서 보러가기</span>
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {sheetCards.map((card) => (
+                      <CardItem
+                        key={card.id}
+                        card={card}
+                        isDark={isDark}
+                        onDelete={() => {}}
+                        onEdit={() => {}}
+                        onSetRepresentative={() => {}}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
-              <button
-                onClick={() => router.push(`/${selectedDay}`)}
-                className={`w-full h-40 rounded-xl flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
-              >
-                <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>탭해서 보러가기</span>
-              </button>
+              <div className="px-5 pb-5">
+                {selectedMeta?.preview_image ? (
+                  <button onClick={() => router.push(`/${selectedDay}`)} className="w-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedMeta.preview_image} alt="" className="w-full h-56 object-cover rounded-xl" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => router.push(`/${selectedDay}`)}
+                    className={`w-full h-40 rounded-xl flex items-center justify-center ${isDark ? "bg-gray-800" : "bg-gray-100"}`}
+                  >
+                    <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>탭해서 보러가기</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </>
