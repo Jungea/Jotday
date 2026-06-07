@@ -65,8 +65,8 @@ function SearchContent() {
   const [modalShowForm, setModalShowForm] = useState(false);
   const [shareLinkModal, setShareLinkModal] = useState<{ url: string; expiresAt: string | null } | null>(null);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const didInitialSearch = useRef(false);
 
   const fetchResults = useCallback(async (q: string, tags: string[], p: number, replace: boolean) => {
     if (!q && tags.length === 0) {
@@ -89,18 +89,25 @@ function SearchContent() {
     setSearched(true);
   }, []);
 
+  // URL 파라미터로 직접 진입 시 초기 검색
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(0);
+    if (didInitialSearch.current) return;
+    if (query || activeTags.length > 0) {
+      didInitialSearch.current = true;
       fetchResults(query, activeTags, 0, true);
-      const params = new URLSearchParams();
-      if (query) params.set("q", query);
-      if (activeTags.length > 0) params.set("tags", activeTags.join(","));
-      router.replace(`/search${params.toString() ? `?${params}` : ""}`, { scroll: false });
-    }, 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, activeTags, fetchResults, router]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSearch(overrideTags?: string[]) {
+    const tags = overrideTags ?? activeTags;
+    if (!query && tags.length === 0) return;
+    setPage(0);
+    fetchResults(query, tags, 0, true);
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (tags.length > 0) params.set("tags", tags.join(","));
+    router.replace(`/search${params.toString() ? `?${params}` : ""}`, { scroll: false });
+  }
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -119,8 +126,10 @@ function SearchContent() {
   function addTag(raw: string) {
     const tag = raw.trim().toLowerCase().replace(/^#/, "");
     if (!tag || activeTags.includes(tag)) return;
-    setActiveTags((prev) => [...prev, tag]);
+    const newTags = [...activeTags, tag];
+    setActiveTags(newTags);
     setTagInput("");
+    handleSearch(newTags);
   }
 
   // 모달 열기
@@ -171,25 +180,28 @@ function SearchContent() {
       {/* 검색 헤더 */}
       <div className={`shrink-0 px-4 pt-4 pb-3 border-b ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200"}`}>
         <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-100"}`}>
-          <Search size={16} className={sub} />
           <input
             autoFocus
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
             placeholder="내용 검색..."
             className={`flex-1 text-sm bg-transparent outline-none ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
           />
           {query && (
             <button onClick={() => setQuery("")} className={sub}><X size={15} /></button>
           )}
+          <button onClick={handleSearch} className={sub}>
+            <Search size={16} />
+          </button>
         </div>
         <div className="flex flex-wrap gap-1.5 items-center mt-2.5 min-h-[28px]">
           <Hash size={13} className={sub} />
           {activeTags.map((tag) => (
             <span key={tag} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
               {tag}
-              <button onClick={() => setActiveTags((prev) => prev.filter((t) => t !== tag))} className="hover:opacity-70"><X size={10} /></button>
+              <button onClick={() => { const newTags = activeTags.filter((t) => t !== tag); setActiveTags(newTags); handleSearch(newTags); }} className="hover:opacity-70"><X size={10} /></button>
             </span>
           ))}
           <input
