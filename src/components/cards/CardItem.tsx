@@ -514,7 +514,18 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
   onEdit?: () => void; onDelete?: () => void;
   menuDir: "up" | "down";
 }) {
-  const menuClass = `absolute ${menuDir === "up" ? "bottom-8" : "top-8"} right-0 z-50 rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [actualDir, setActualDir] = useState<"up" | "down">(menuDir);
+
+  function handleToggleMore() {
+    if (!showMore && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setActualDir(window.innerHeight - rect.bottom < 200 ? "up" : "down");
+    }
+    setShowMore((v) => !v);
+  }
+
+  const menuClass = `absolute ${actualDir === "up" ? "bottom-8" : "top-8"} right-0 z-50 rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
   const itemClass = (active?: boolean) => `w-full flex items-center gap-2.5 px-3 py-2 text-xs ${active ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50")}`;
   const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
 
@@ -539,8 +550,8 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
     <>
       {order.map((id) => pinnedMap[id])}
       {overflowEls.length > 0 && (
-        <div className="relative">
-          <button onClick={() => setShowMore((v) => !v)} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+        <div className="relative" ref={containerRef}>
+          <button onClick={handleToggleMore} className={`${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400" : "text-gray-500"}`}>
             <MoreHorizontal size={size} />
           </button>
           {showMore && (
