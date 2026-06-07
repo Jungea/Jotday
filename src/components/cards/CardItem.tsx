@@ -374,134 +374,37 @@ function ImageSwiper({ images, disableLightbox }: { images: { url: string }[]; d
   );
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const lines: string[] = [];
-  for (const para of text.split("\n")) {
-    let line = "";
-    for (const char of para) {
-      const test = line + char;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        lines.push(line);
-        line = char;
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-  }
-  return lines;
-}
-
-async function buildCardBlob(card: Card, isDark: boolean): Promise<Blob | null> {
-  const images = card.images?.length > 0
-    ? card.images
-    : card.image_url ? [{ url: card.image_url }] : [];
-
-  const W = 1080, H = 1350;
-  const canvas = document.createElement("canvas");
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
-
-  // Background
-  ctx.fillStyle = isDark ? "#111111" : "#f5f5f5";
-  ctx.fillRect(0, 0, W, H);
-
-  // Image
-  if (images.length > 0) {
-    try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      await new Promise<void>((res, rej) => {
-        img.onload = () => res();
-        img.onerror = rej;
-        img.src = images[0].url;
-      });
-      const iw = img.naturalWidth, ih = img.naturalHeight;
-      const canvasRatio = W / H;
-      const imgRatio = iw / ih;
-      let sx = 0, sy = 0, sw = iw, sh = ih;
-      if (imgRatio > canvasRatio) { sw = ih * canvasRatio; sx = (iw - sw) / 2; }
-      else { sh = iw / canvasRatio; sy = (ih - sh) / 2; }
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
-    } catch { /* 이미지 로드 실패 시 배경만 */ }
-  }
-
-  // 텍스트가 있으면 하단 그라데이션 오버레이
-  if (card.content && images.length > 0) {
-    const grad = ctx.createLinearGradient(0, H * 0.55, 0, H);
-    grad.addColorStop(0, "rgba(0,0,0,0)");
-    grad.addColorStop(1, "rgba(0,0,0,0.75)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-  }
-
-  const onImage = images.length > 0;
-  const textColor = onImage ? "#ffffff" : (isDark ? "#e5e5e5" : "#111111");
-  const subColor  = onImage ? "rgba(255,255,255,0.55)" : (isDark ? "#555555" : "#aaaaaa");
-
-  // 날짜
-  ctx.font = "300 36px sans-serif";
-  ctx.fillStyle = subColor;
-  ctx.textBaseline = "top";
-  ctx.fillText(format(new Date(card.created_at), "yyyy.MM.dd"), 64, 64);
-
-  // 본문
-  if (card.content) {
-    ctx.font = "400 46px sans-serif";
-    ctx.fillStyle = textColor;
-    ctx.textBaseline = "top";
-    const lines = wrapText(ctx, card.content, W - 128);
-    const lineH = 70;
-    const maxLines = 10;
-    const visible = lines.slice(0, maxLines);
-    let startY = onImage ? H - 80 - visible.length * lineH : 180;
-    for (const line of visible) {
-      ctx.fillText(line, 64, startY);
-      startY += lineH;
-    }
-  }
-
-  // 브랜딩
-  ctx.font = "300 28px sans-serif";
-  ctx.fillStyle = subColor;
-  ctx.textBaseline = "bottom";
-  ctx.textAlign = "right";
-  ctx.fillText("Jotday", W - 64, H - 56);
-
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-}
-
 function cardFilename(card: Card, index?: number) {
   const time = format(new Date(), "HHmmss");
   const base = `jotday-${card.date}-${time}`;
-  return index !== undefined ? `${base}-${index + 1}.png` : `${base}.png`;
+  return index !== undefined ? `${base}-${index + 1}.jpg` : `${base}.jpg`;
 }
 
-async function downloadCard(card: Card, isDark: boolean) {
-  const blob = await buildCardBlob(card, isDark);
-  if (!blob) return;
-  const url = URL.createObjectURL(blob);
+async function downloadImageUrl(url: string, filename: string) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = cardFilename(card);
+  a.href = objectUrl;
+  a.download = filename;
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(objectUrl);
 }
 
-async function downloadAllCards(card: Card, isDark: boolean) {
+async function downloadCard(card: Card) {
   const images = card.images?.length > 0
     ? card.images
-    : card.image_url ? [{ url: card.image_url, public_id: "" }] : [];
+    : card.image_url ? [{ url: card.image_url }] : [];
+  if (!images.length) return;
+  await downloadImageUrl(images[0].url, cardFilename(card));
+}
+
+async function downloadAllCards(card: Card) {
+  const images = card.images?.length > 0
+    ? card.images
+    : card.image_url ? [{ url: card.image_url }] : [];
   for (let i = 0; i < images.length; i++) {
-    const single = { ...card, images: [images[i]], image_url: images[i].url };
-    const blob = await buildCardBlob(single, isDark);
-    if (!blob) continue;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = cardFilename(card, i);
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadImageUrl(images[i].url, cardFilename(card, i));
     if (i < images.length - 1) await new Promise((r) => setTimeout(r, 300));
   }
 }
@@ -635,8 +538,8 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   async function handleDownload() {
     setSharing(true);
     const hasMultiple = (card.images?.length ?? 0) > 1;
-    if (hasMultiple) await downloadAllCards(card, isDark);
-    else await downloadCard(card, isDark);
+    if (hasMultiple) await downloadAllCards(card);
+    else await downloadCard(card);
     setSharing(false);
   }
 
