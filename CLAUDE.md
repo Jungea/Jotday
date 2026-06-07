@@ -94,3 +94,7 @@ localStorage는 첫 페인트용 캐시. 실제 값은 `user_settings` 테이블
 - `content` gin_trgm_ops 인덱스 (빠른 ILIKE)
 
 DB 구조 변경 시 `supabase/schema.sql`에 반영한다. 사용자에게 안내할 때는 실행용 수정 쿼리(ALTER/UPDATE)로 알려주되, SQL 파일에는 최초 생성 기준 INSERT 형태로 추가한다.
+
+### Build Version
+
+`next.config.ts`에서 빌드 시 자동으로 `NEXT_PUBLIC_GIT_HASH`(git 커밋 해시)와 `NEXT_PUBLIC_BUILD_TIME`(빌드 시각 KST)을 주입한다. 설정 페이지 하단에 표시되며, 배포 여부 확인용으로 사용한다. 커밋 후 재배포하면 자동 갱신되므로 별도 수동 수정 불필요.
