@@ -197,7 +197,7 @@ export default function SettingsPage() {
         {/* 피드 필터 */}
         <section>
           <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>피드 필터</h2>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext id="card-actions-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={presets.map((p) => p.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {presets.map((preset) => (
@@ -216,7 +216,7 @@ export default function SettingsPage() {
         {/* 카드 액션 */}
         <section>
           <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>카드 액션 버튼</h2>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => {
+          <DndContext id="feed-presets-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => {
             const { active, over } = e;
             if (!over || active.id === over.id) return;
             reorderActions(order.indexOf(active.id as ActionId), order.indexOf(over.id as ActionId));
