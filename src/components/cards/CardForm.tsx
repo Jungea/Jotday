@@ -212,14 +212,14 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={manualTime}
-                      onChange={(e) => setManualTime(e.target.checked)}
-                      className="w-4 h-4"
-                    />
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
                     <span className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간 직접 설정</span>
+                    <span
+                      onClick={() => setManualTime((v) => !v)}
+                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${manualTime ? (isDark ? "bg-white" : "bg-gray-900") : (isDark ? "bg-gray-700" : "bg-gray-200")}`}
+                    >
+                      <span className={`inline-block h-3.5 w-3.5 rounded-full shadow-sm transition-transform duration-200 ${manualTime ? "translate-x-[20px]" : "translate-x-[2px]"} ${manualTime && isDark ? "bg-gray-900" : "bg-white"}`} />
+                    </span>
                   </label>
                   {manualTime && (
                     <input
