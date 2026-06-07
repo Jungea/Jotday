@@ -243,6 +243,10 @@ export default function SettingsPage() {
             <span className="text-sm font-medium">로그아웃</span>
           </button>
         </section>
+        {/* 버전 정보 */}
+        <p className={`text-center text-xs pb-2 ${isDark ? "text-gray-700" : "text-gray-300"}`}>
+          {process.env.NEXT_PUBLIC_GIT_HASH} · {process.env.NEXT_PUBLIC_BUILD_TIME ? new Date(new Date(process.env.NEXT_PUBLIC_BUILD_TIME).getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 16).replace("T", " ") : ""}
+        </p>
         </div>
       </main>
 
