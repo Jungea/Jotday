@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import type { DragEvent } from "react";
+import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
 import { X, Upload, Camera } from "lucide-react";
 
@@ -58,30 +59,16 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
-    const MAX = 2400;
     const srcs: string[] = [];
     for (const file of files) {
       try {
-        const src = await new Promise<string>((resolve, reject) => {
-          const objectUrl = URL.createObjectURL(file);
-          const img = new Image();
-          img.onload = () => {
-            URL.revokeObjectURL(objectUrl);
-            const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.round(img.naturalWidth * scale);
-            canvas.height = Math.round(img.naturalHeight * scale);
-            canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob((blob) => {
-              canvas.width = 0;
-              if (blob) resolve(URL.createObjectURL(blob));
-              else reject(new Error("toBlob failed"));
-            }, "image/jpeg", 0.85);
-          };
-          img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("image load failed")); };
-          img.src = objectUrl;
+        const compressed = await imageCompression(file, {
+          maxWidthOrHeight: 2400,
+          useWebWorker: true,
+          fileType: "image/jpeg",
+          initialQuality: 0.85,
         });
-        srcs.push(src);
+        srcs.push(URL.createObjectURL(compressed));
       } catch {
         // 실패한 이미지는 건너뜀
       }
