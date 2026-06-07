@@ -61,28 +61,32 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     const MAX = 2400;
     const srcs: string[] = [];
     for (const file of files) {
-      const src = await new Promise<string>((resolve, reject) => {
-        const objectUrl = URL.createObjectURL(file);
-        const img = new Image();
-        img.onload = () => {
-          URL.revokeObjectURL(objectUrl);
-          const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(img.naturalWidth * scale);
-          canvas.height = Math.round(img.naturalHeight * scale);
-          canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => {
-            canvas.width = 0;
-            if (blob) resolve(URL.createObjectURL(blob));
-            else reject(new Error("toBlob failed"));
-          }, "image/jpeg", 0.85);
-        };
-        img.onerror = reject;
-        img.src = objectUrl;
-      });
-      srcs.push(src);
+      try {
+        const src = await new Promise<string>((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.naturalWidth * scale);
+            canvas.height = Math.round(img.naturalHeight * scale);
+            canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+              canvas.width = 0;
+              if (blob) resolve(URL.createObjectURL(blob));
+              else reject(new Error("toBlob failed"));
+            }, "image/jpeg", 0.85);
+          };
+          img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("image load failed")); };
+          img.src = objectUrl;
+        });
+        srcs.push(src);
+      } catch {
+        // 실패한 이미지는 건너뜀
+      }
     }
-    setCropQueue((q) => [...q, ...srcs]);
+    if (srcs.length > 0) setCropQueue((q) => [...q, ...srcs]);
   }
 
   function handleCropConfirm(file: File) {
