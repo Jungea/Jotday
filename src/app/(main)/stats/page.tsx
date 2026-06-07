@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, LayoutGrid, CalendarDays, CalendarRange } from "lucide-react";
-import { format, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useThemeStore } from "@/store/theme";
 
@@ -15,6 +15,9 @@ interface Stats {
   monthly: Record<string, number>;
   topTags: { tag: string; count: number }[];
   recentTopTags: { tag: string; count: number }[];
+  periodCounts: { label: string; count: number }[];
+  recentPeriodCounts: { label: string; count: number }[];
+  topDays: { date: string; count: number }[];
   dailyCounts: { date: string; count: number }[];
   dowCount: number[];
   thisMonthRecorded: number;
@@ -29,6 +32,7 @@ export default function StatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [tagMode, setTagMode] = useState<"all" | "recent">("recent");
+  const [periodMode, setPeriodMode] = useState<"all" | "recent">("recent");
 
   useEffect(() => {
     fetch("/api/stats")
@@ -97,14 +101,14 @@ export default function StatsPage() {
                 <div className={`rounded-2xl p-4 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
                   <p className={`text-sm font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>이번 주</p>
                   <div className="flex items-end justify-between gap-1.5">
-                    {stats.weekDayCounts.map(({ day, count }) => {
+                    {stats.weekDayCounts.map(({ day, date, count }) => {
                       const isToday = day === todayDow;
                       const isFuture = day > todayDow;
                       const isSun = day === 0;
                       const isSat = day === 6;
                       const heightPct = count === 0 ? 4 : Math.round((count / maxW) * 100);
                       return (
-                        <div key={day} className="flex flex-col items-center gap-1 flex-1">
+                        <button key={day} onClick={() => count > 0 && router.push(`/${date}`)} className="flex flex-col items-center gap-1 flex-1">
                           <span className={`text-[10px] font-medium ${count > 0 ? isDark ? "text-gray-400" : "text-gray-500" : "invisible"}`}>
                             {count}
                           </span>
@@ -129,7 +133,7 @@ export default function StatsPage() {
                           }`}>
                             {DOW_LABELS[day]}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -151,7 +155,7 @@ export default function StatsPage() {
                         const showLabel = i === 0 || isToday || (dayNum % 5 === 0);
                         const heightPct = count === 0 ? 3 : Math.round((count / maxDay) * 100);
                         return (
-                          <div key={date} className="flex flex-col items-center gap-0.5" style={{ width: "14px" }}>
+                          <button key={date} onClick={() => count > 0 && router.push(`/${date}`)} className="flex flex-col items-center gap-0.5" style={{ width: "14px" }}>
                             <span className={`text-[8px] leading-none ${count > 0 ? isDark ? "text-gray-400" : "text-gray-500" : "invisible"}`}>
                               {count}
                             </span>
@@ -174,7 +178,7 @@ export default function StatsPage() {
                             }`}>
                               {dayNum}
                             </span>
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
@@ -187,10 +191,10 @@ export default function StatsPage() {
             <div className={`rounded-2xl p-4 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
               <p className={`text-sm font-semibold mb-4 ${isDark ? "text-white" : "text-gray-800"}`}>최근 6개월</p>
               <div className="flex items-end justify-between gap-1.5 h-28">
-                {monthlyEntries.map(({ month, count }) => {
+                {[...monthlyEntries].reverse().map(({ month, count }) => {
                   const isThisMonth = month === format(today, "yyyy-MM");
                   const heightPct = count === 0 ? 4 : Math.round((count / maxCount) * 100);
-                  const label = format(subMonths(today, monthlyEntries.findIndex((e) => e.month === month) === -1 ? 0 : 5 - monthlyEntries.findIndex((e) => e.month === month)), "M월", { locale: ko });
+                  const label = format(new Date(month + "-01"), "M월", { locale: ko });
                   return (
                     <div key={month} className="flex flex-col items-center gap-1 flex-1">
                       {count > 0 && (
@@ -213,6 +217,85 @@ export default function StatsPage() {
               </div>
             </div>
 
+            {/* 기록 시간대 */}
+            {(() => {
+              const periods = periodMode === "all" ? stats.periodCounts : stats.recentPeriodCounts;
+              const maxP = Math.max(...periods.map((p) => p.count), 1);
+              const total = periods.reduce((s, p) => s + p.count, 0);
+              return (
+                <div className={`rounded-2xl p-4 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-gray-800"}`}>기록 시간대</p>
+                    <div className={`flex rounded-lg overflow-hidden text-xs font-medium ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
+                      <button
+                        onClick={() => setPeriodMode("recent")}
+                        className={`px-3 py-1 transition-colors ${periodMode === "recent" ? isDark ? "bg-white text-black" : "bg-gray-900 text-white" : isDark ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        최근 30일
+                      </button>
+                      <button
+                        onClick={() => setPeriodMode("all")}
+                        className={`px-3 py-1 transition-colors ${periodMode === "all" ? isDark ? "bg-white text-black" : "bg-gray-900 text-white" : isDark ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        전체
+                      </button>
+                    </div>
+                  </div>
+                  {(() => {
+                    const COLORS = ["#818cf8", "#fbbf24", "#34d399", "#a78bfa"];
+                    let cumPct = 0;
+                    const segments = periods.map(({ count }, i) => {
+                      const pct = total === 0 ? 25 : (count / total) * 100;
+                      const part = `${COLORS[i]} ${cumPct}% ${cumPct + pct}%`;
+                      cumPct += pct;
+                      return part;
+                    });
+                    const gradient = total === 0
+                      ? `conic-gradient(${isDark ? "#374151" : "#e5e7eb"} 0% 100%)`
+                      : `conic-gradient(${segments.join(", ")})`;
+                    return (
+                      <div className="flex items-center gap-5">
+                        <div className="relative shrink-0 w-28 h-28 rounded-full" style={{ background: gradient }}>
+                          <div className={`absolute inset-[22px] rounded-full ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`} />
+                        </div>
+                        <div className="flex flex-col gap-2 flex-1">
+                          {periods.map(({ label, count }, i) => {
+                            const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+                            return (
+                              <div key={label} className="flex items-center gap-2">
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[i] }} />
+                                <span className={`text-xs flex-1 ${isDark ? "text-gray-300" : "text-gray-700"}`}>{label}</span>
+                                <span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>{count}개</span>
+                                <span className={`text-xs w-8 text-right ${isDark ? "text-gray-500" : "text-gray-400"}`}>{total > 0 ? `${pct}%` : ""}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              );
+            })()}
+
+            {/* 가장 활발한 날 */}
+            {stats.topDays.length > 0 && (
+              <div className={`rounded-2xl p-4 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
+                <p className={`text-sm font-semibold mb-3 ${isDark ? "text-white" : "text-gray-800"}`}>가장 활발한 날</p>
+                <div className="flex flex-col gap-2">
+                  {stats.topDays.map(({ date, count }, i) => (
+                    <button key={date} onClick={() => router.push(`/${date}`)} className={`flex items-center gap-2 w-full text-left rounded-xl px-2 py-1 -mx-2 transition-colors ${isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"}`}>
+                      <span className={`text-xs w-4 text-right shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}>{i + 1}</span>
+                      <span className={`flex-1 text-sm ${isDark ? "text-gray-200" : "text-gray-800"}`}>
+                        {format(new Date(date), "yyyy년 M월 d일 (EEE)", { locale: ko })}
+                      </span>
+                      <span className={`text-sm font-semibold shrink-0 ${isDark ? "text-white" : "text-gray-900"}`}>{count}개</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 자주 쓴 태그 */}
             {(stats.topTags.length > 0 || stats.recentTopTags.length > 0) && (
               <div className={`rounded-2xl p-4 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
@@ -220,16 +303,16 @@ export default function StatsPage() {
                   <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-gray-800"}`}>자주 쓴 태그</p>
                   <div className={`flex rounded-lg overflow-hidden text-xs font-medium ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
                     <button
-                      onClick={() => setTagMode("all")}
-                      className={`px-3 py-1 transition-colors ${tagMode === "all" ? isDark ? "bg-white text-black" : "bg-gray-900 text-white" : isDark ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      전체
-                    </button>
-                    <button
                       onClick={() => setTagMode("recent")}
                       className={`px-3 py-1 transition-colors ${tagMode === "recent" ? isDark ? "bg-white text-black" : "bg-gray-900 text-white" : isDark ? "text-gray-400" : "text-gray-500"}`}
                     >
                       최근 30일
+                    </button>
+                    <button
+                      onClick={() => setTagMode("all")}
+                      className={`px-3 py-1 transition-colors ${tagMode === "all" ? isDark ? "bg-white text-black" : "bg-gray-900 text-white" : isDark ? "text-gray-400" : "text-gray-500"}`}
+                    >
+                      전체
                     </button>
                   </div>
                 </div>
@@ -245,7 +328,7 @@ export default function StatsPage() {
                       {tags.map(({ tag, count }, i) => {
                         const widthPct = Math.round((count / tags[0].count) * 100);
                         return (
-                          <div key={tag} className="flex items-center gap-2">
+                          <button key={tag} onClick={() => router.push(`/search?tags=${encodeURIComponent(tag)}`)} className="flex items-center gap-2 w-full text-left">
                             <span className={`text-xs w-4 text-right shrink-0 ${isDark ? "text-gray-600" : "text-gray-400"}`}>{i + 1}</span>
                             <div className="flex-1 relative h-6 flex items-center">
                               <div
@@ -257,7 +340,7 @@ export default function StatsPage() {
                               </span>
                             </div>
                             <span className={`text-xs shrink-0 ${isDark ? "text-gray-500" : "text-gray-400"}`}>{count}</span>
-                          </div>
+                          </button>
                         );
                       })}
                     </div>

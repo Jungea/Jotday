@@ -13,7 +13,7 @@ export async function GET() {
 
   const [{ count: totalCards }, { data: cardDates }, { data: tagRows }, { data: recentTagRows }] = await Promise.all([
     supabase.from("cards").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-    supabase.from("cards").select("date").eq("user_id", user.id).order("date", { ascending: false }),
+    supabase.from("cards").select("date, created_at").eq("user_id", user.id).order("date", { ascending: false }),
     supabase.from("cards").select("tags").eq("user_id", user.id),
     supabase.from("cards").select("tags").eq("user_id", user.id).gte("date", thirtyDaysAgo),
   ]);
@@ -100,6 +100,34 @@ export async function GET() {
     cardDates?.filter(({ date }) => (date as string).startsWith(thisMonthStr)).map(({ date }) => date)
   ).size;
 
+  // 기록 시간대 (KST = UTC+9), 4구간
+  const TIME_PERIODS = [
+    { label: "새벽", start: 0, end: 5 },
+    { label: "아침", start: 6, end: 11 },
+    { label: "오후", start: 12, end: 17 },
+    { label: "밤", start: 18, end: 23 },
+  ];
+  function aggregatePeriods(rows: { created_at: string }[]) {
+    const counts = TIME_PERIODS.map((p) => ({ label: p.label, count: 0 }));
+    rows.forEach(({ created_at }) => {
+      if (!created_at) return;
+      const hour = (new Date(created_at).getUTCHours() + 9) % 24;
+      const idx = TIME_PERIODS.findIndex((p) => hour >= p.start && hour <= p.end);
+      if (idx !== -1) counts[idx].count++;
+    });
+    return counts;
+  }
+  const periodCounts = aggregatePeriods((cardDates ?? []) as { created_at: string }[]);
+  const recentPeriodCounts = aggregatePeriods(
+    (cardDates ?? []).filter(({ date }) => (date as string) >= thirtyDaysAgo) as { created_at: string }[]
+  );
+
+  // 가장 활발한 날 Top 5
+  const topDays = Object.entries(dateCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([date, count]) => ({ date, count }));
+
   return NextResponse.json({
     totalCards: totalCards ?? 0,
     thisWeekCount,
@@ -109,6 +137,9 @@ export async function GET() {
     dailyCounts,
     topTags,
     recentTopTags,
+    periodCounts,
+    recentPeriodCounts,
+    topDays,
     dowCount,
     thisMonthRecorded,
     thisMonthPassed,
