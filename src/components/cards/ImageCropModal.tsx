@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Check, RotateCw } from "lucide-react";
+import { X, Check, RotateCw, LockOpen, Lock } from "lucide-react";
 
 const ASPECT_W = 4;
 const ASPECT_H = 5;
@@ -48,7 +48,10 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
   });
   const scaleRef = useRef(1);
   const minScaleRef = useRef(1);
+  const coverScaleRef = useRef(1);
   const naturalRef = useRef({ w: 0, h: 0 });
+  const lockedRef = useRef(true);
+  const [locked, setLocked] = useState(true);
 
   const [, setTick] = useState(0);
   function requestRender() {
@@ -56,8 +59,21 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     rafRef.current = requestAnimationFrame(() => setTick((n) => n + 1));
   }
 
-  function clamp(px: number, py: number, _s: number) {
-    return { x: px, y: py };
+  function clampPos(px: number, py: number, s: number) {
+    if (!lockedRef.current) return { x: px, y: py };
+    const { x: fx, y: fy, w: fw, h: fh } = cropRef.current;
+    const { w: nw, h: nh } = naturalRef.current;
+    if (!nw || !nh) return { x: px, y: py };
+    const hw = (nw * s) / 2;
+    const hh = (nh * s) / 2;
+    return {
+      x: Math.max(fx + fw - hw, Math.min(fx + hw, px)),
+      y: Math.max(fy + fh - hh, Math.min(fy + hh, py)),
+    };
+  }
+
+  function getMinScale() {
+    return lockedRef.current ? coverScaleRef.current : minScaleRef.current;
   }
 
   function handleLoad() {
@@ -69,10 +85,10 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     const { w: cw, h: ch } = cropRef.current;
     // 초기 스케일: 크롭 영역에 꽉 차게
     const s = Math.max(cw / nw, ch / nh);
-    // 최소 스케일: 이미지가 크롭 영역 안에 들어오는 크기
+    coverScaleRef.current = s;
     minScaleRef.current = Math.min(cw / nw, ch / nh) * 0.5;
     scaleRef.current = s;
-    posRef.current = { x: posRef.current.x, y: posRef.current.y };
+    posRef.current = clampPos(posRef.current.x, posRef.current.y, s);
     requestRender();
   }
 
@@ -101,16 +117,16 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
         const dx = e.touches[0].clientX - lastTouch.current.x;
         const dy = e.touches[0].clientY - lastTouch.current.y;
         lastTouch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        posRef.current = clamp(posRef.current.x + dx, posRef.current.y + dy, scaleRef.current);
+        posRef.current = clampPos(posRef.current.x + dx, posRef.current.y + dy, scaleRef.current);
         requestRender();
       } else if (e.touches.length >= 2) {
         const d = touchDist(e.touches);
         const mid = touchMid(e.touches);
-        const newScale = Math.max(minScaleRef.current, scaleRef.current * (d / lastPinchDist.current));
+        const newScale = Math.max(getMinScale(), scaleRef.current * (d / lastPinchDist.current));
         const nx = mid.x + (posRef.current.x - mid.x) * (newScale / scaleRef.current);
         const ny = mid.y + (posRef.current.y - mid.y) * (newScale / scaleRef.current);
         scaleRef.current = newScale;
-        posRef.current = clamp(nx, ny, newScale);
+        posRef.current = clampPos(nx, ny, newScale);
         lastPinchDist.current = d;
         requestRender();
       }
@@ -139,7 +155,7 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     const dx = e.clientX - lastMouse.current.x;
     const dy = e.clientY - lastMouse.current.y;
     lastMouse.current = { x: e.clientX, y: e.clientY };
-    posRef.current = clamp(posRef.current.x + dx, posRef.current.y + dy, scaleRef.current);
+    posRef.current = clampPos(posRef.current.x + dx, posRef.current.y + dy, scaleRef.current);
     requestRender();
   }
   function onPointerUp(e: React.PointerEvent) {
@@ -154,11 +170,11 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     function onWheel(e: WheelEvent) {
       e.preventDefault();
       const ratio = e.deltaY < 0 ? 1.08 : 0.93;
-      const newScale = Math.max(minScaleRef.current, scaleRef.current * ratio);
+      const newScale = Math.max(getMinScale(), scaleRef.current * ratio);
       const nx = e.clientX + (posRef.current.x - e.clientX) * (newScale / scaleRef.current);
       const ny = e.clientY + (posRef.current.y - e.clientY) * (newScale / scaleRef.current);
       scaleRef.current = newScale;
-      posRef.current = clamp(nx, ny, newScale);
+      posRef.current = clampPos(nx, ny, newScale);
       requestRender();
     }
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -182,6 +198,17 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
       blobUrls.current.push(url);
       setCurrentSrc(url);
     }, "image/jpeg", 0.95);
+  }
+
+  function toggleLock() {
+    const newLocked = !lockedRef.current;
+    lockedRef.current = newLocked;
+    setLocked(newLocked);
+    if (newLocked) {
+      if (scaleRef.current < coverScaleRef.current) scaleRef.current = coverScaleRef.current;
+      posRef.current = clampPos(posRef.current.x, posRef.current.y, scaleRef.current);
+      requestRender();
+    }
   }
 
   function handleConfirm() {
@@ -313,23 +340,33 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
         ))}
       </div>
 
+      {/* Lock toggle */}
+      <div
+        className="absolute left-0 right-0 flex justify-center pointer-events-none"
+        style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
+      >
+        <button
+          className={`pointer-events-auto flex items-center backdrop-blur-sm p-2.5 rounded-full transition-colors ${locked ? "bg-amber-400/90 text-black" : "bg-white/10 text-white"}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={toggleLock}
+        >
+          {locked ? <Lock size={16} /> : <LockOpen size={16} />}
+        </button>
+      </div>
+
       {/* Header */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-5"
         style={{ pointerEvents: "none" }}
       >
-        <button
-          className="text-white/80 hover:text-white w-10 h-10 flex items-center justify-center"
-          style={{ pointerEvents: "auto" }}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onCancel}
-        >
-          <X size={22} />
-        </button>
-        <span className="text-white text-sm font-medium">
-          {total && total > 1 ? `사진 조절 ${current} / ${total}` : "사진 조절"}
-        </span>
         <div className="flex items-center" style={{ pointerEvents: "auto" }}>
+          <button
+            className="text-white/80 hover:text-white w-10 h-10 flex items-center justify-center"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onCancel}
+          >
+            <X size={22} />
+          </button>
           <button
             className="text-white/80 hover:text-white w-10 h-10 flex items-center justify-center"
             onPointerDown={(e) => e.stopPropagation()}
@@ -337,14 +374,18 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
           >
             <RotateCw size={20} />
           </button>
-          <button
-            className="text-amber-400 hover:text-amber-300 font-semibold w-10 h-10 flex items-center justify-center"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={handleConfirm}
-          >
-            <Check size={22} />
-          </button>
         </div>
+        <span className="text-white text-sm font-medium">
+          {total && total > 1 ? `사진 조절 ${current} / ${total}` : "사진 조절"}
+        </span>
+        <button
+          className="text-amber-400 hover:text-amber-300 font-semibold w-10 h-10 flex items-center justify-center"
+          style={{ pointerEvents: "auto" }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleConfirm}
+        >
+          <Check size={22} />
+        </button>
       </div>
     </div>
   );

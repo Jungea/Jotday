@@ -57,15 +57,25 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const readers = files.map(
+    const MAX = 2400;
+    const promises = files.map(
       (file) =>
         new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target?.result as string);
-          reader.readAsDataURL(file);
+          const objectUrl = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.naturalWidth * scale);
+            canvas.height = Math.round(img.naturalHeight * scale);
+            canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.88));
+          };
+          img.src = objectUrl;
         })
     );
-    Promise.all(readers).then((srcs) => setCropQueue((q) => [...q, ...srcs]));
+    Promise.all(promises).then((srcs) => setCropQueue((q) => [...q, ...srcs]));
     e.target.value = "";
   }
 
