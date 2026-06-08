@@ -180,6 +180,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     <>
       {cropQueue[0] && (
         <ImageCropModal
+          key={cropQueue[0]}
           src={cropQueue[0]}
           current={slots.length + 1}
           total={slots.length + cropQueue.length}
