@@ -31,14 +31,6 @@ function getBuiltinRange(id: BuiltinKey): { from: string; to: string } {
   }
 }
 
-const FILTER_KEY = "feed-filter";
-
-type FilterCache = {
-  sort: Sort; selectedId: SelectedId;
-  customFrom: string; customTo: string;
-  appliedFrom: string; appliedTo: string;
-  imagesOnly: boolean;
-};
 
 export default function FeedPage() {
   const router = useRouter();
@@ -73,28 +65,6 @@ export default function FeedPage() {
     ? { from: appliedFrom, to: appliedTo }
     : getBuiltinRange(selectedId as BuiltinKey);
 
-  // 필터 복원
-  useEffect(() => {
-    const raw = sessionStorage.getItem(FILTER_KEY);
-    if (!raw) return;
-    try {
-      const f: FilterCache = JSON.parse(raw);
-      setSort(f.sort);
-      setSelectedId(f.selectedId);
-      setCustomFrom(f.customFrom);
-      setCustomTo(f.customTo);
-      setAppliedFrom(f.appliedFrom);
-      setAppliedTo(f.appliedTo);
-      setImagesOnly(f.imagesOnly ?? false);
-    } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 필터 저장
-  useEffect(() => {
-    const data: FilterCache = { sort, selectedId, customFrom, customTo, appliedFrom, appliedTo, imagesOnly };
-    sessionStorage.setItem(FILTER_KEY, JSON.stringify(data));
-  }, [sort, selectedId, customFrom, customTo, appliedFrom, appliedTo]);
 
   const fetchPage = useCallback(async (pageNum: number, reset = false) => {
     if (fetchingRef.current) return;
