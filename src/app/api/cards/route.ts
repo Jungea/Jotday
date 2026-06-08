@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get("sort") === "asc" ? "asc" : "desc";
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const imagesOnly = searchParams.get("imagesOnly") === "true";
     const page = parseInt(searchParams.get("page") ?? "0", 10);
     const limit = 20;
 
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest) {
 
     if (from) query = query.gte("date", from);
     if (to) query = query.lte("date", to);
+    if (imagesOnly) query = query.not("image_url", "is", null);
 
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -37,6 +37,7 @@ type FilterCache = {
   sort: Sort; selectedId: SelectedId;
   customFrom: string; customTo: string;
   appliedFrom: string; appliedTo: string;
+  imagesOnly: boolean;
 };
 
 export default function FeedPage() {
@@ -52,6 +53,7 @@ export default function FeedPage() {
   const [customTo, setCustomTo] = useState("");
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
+  const [imagesOnly, setImagesOnly] = useState(false);
 
   const [cards, setCards] = useState<Card[]>([]);
   const [page, setPage] = useState(0);
@@ -83,13 +85,14 @@ export default function FeedPage() {
       setCustomTo(f.customTo);
       setAppliedFrom(f.appliedFrom);
       setAppliedTo(f.appliedTo);
+      setImagesOnly(f.imagesOnly ?? false);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 필터 저장
   useEffect(() => {
-    const data: FilterCache = { sort, selectedId, customFrom, customTo, appliedFrom, appliedTo };
+    const data: FilterCache = { sort, selectedId, customFrom, customTo, appliedFrom, appliedTo, imagesOnly };
     sessionStorage.setItem(FILTER_KEY, JSON.stringify(data));
   }, [sort, selectedId, customFrom, customTo, appliedFrom, appliedTo]);
 
@@ -101,6 +104,7 @@ export default function FeedPage() {
     const params = new URLSearchParams({ feed: "true", sort, page: String(pageNum) });
     if (from) params.set("from", from);
     if (to) params.set("to", to);
+    if (imagesOnly) params.set("imagesOnly", "true");
 
     const res = await fetch(`/api/cards?${params}`);
     if (res.ok) {
@@ -112,7 +116,7 @@ export default function FeedPage() {
     setLoading(false);
     setInitialLoaded(true);
     fetchingRef.current = false;
-  }, [sort, from, to]);
+  }, [sort, from, to, imagesOnly]);
 
   useEffect(() => {
     setCards([]);
@@ -182,6 +186,12 @@ export default function FeedPage() {
               {s === "desc" ? "최신순" : "과거순"}
             </button>
           ))}
+          <button
+            onClick={() => setImagesOnly((v) => !v)}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${imagesOnly ? chipActive : chipInactive}`}
+          >
+            사진만
+          </button>
         </div>
 
         {/* Period presets + 직접 설정 */}
