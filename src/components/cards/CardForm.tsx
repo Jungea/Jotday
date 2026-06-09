@@ -59,6 +59,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     };
   }, []);
 
+  const [compressing, setCompressing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -68,19 +69,16 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const [dragOver, setDragOver] = useState<number | null>(null);
 
   async function compressForCrop(file: File): Promise<string> {
-    // createImageBitmap + OffscreenCanvas: 압축 후 원본 비트맵을 즉시 강제 해제
     if (typeof createImageBitmap !== "undefined" && typeof OffscreenCanvas !== "undefined") {
       try {
-        const bitmap = await createImageBitmap(file);
-        const { width, height } = bitmap;
         const MAX = 1200;
-        const scale = Math.min(1, MAX / Math.max(width, height));
-        const w = Math.round(width * scale);
-        const h = Math.round(height * scale);
-        const canvas = new OffscreenCanvas(w, h);
+        // resizeWidth 힌트: 브라우저가 JPEG를 처음부터 작게 디코딩할 수 있으면 48MB 스파이크 방지
+        const bitmap = await createImageBitmap(file, { resizeWidth: MAX, resizeQuality: "medium" });
+        const { width, height } = bitmap;
+        const canvas = new OffscreenCanvas(width, height);
         const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(bitmap, 0, 0, w, h);
-        bitmap.close(); // 원본 50MB 즉시 해제
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close(); // 원본 즉시 해제
         const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.82 });
         return URL.createObjectURL(blob);
       } catch {
@@ -101,6 +99,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
+    setCompressing(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       (files as (File | null)[])[i] = null; // 처리 즉시 참조 해제
@@ -111,6 +110,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         // 실패한 이미지는 건너뜀
       }
     }
+    setCompressing(false);
   }
 
   function handleCropConfirm(file: File) {
@@ -308,16 +308,18 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               <div className="flex gap-2">
                 <button
                   type="button"
+                  disabled={compressing}
                   onClick={() => fileRef.current?.click()}
-                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${compressing ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Upload size={16} />
-                  <span className="text-sm">{slots.length > 0 ? "이미지 추가" : "업로드"}</span>
+                  <span className="text-sm">{compressing ? "처리 중..." : slots.length > 0 ? "이미지 추가" : "업로드"}</span>
                 </button>
                 <button
                   type="button"
+                  disabled={compressing}
                   onClick={() => cameraRef.current?.click()}
-                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${compressing ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Camera size={16} />
                 </button>
