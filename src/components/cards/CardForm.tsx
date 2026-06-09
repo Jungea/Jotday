@@ -12,6 +12,7 @@ function extractTags(text: string): string[] {
 }
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
+import { CameraModal } from "@/components/cards/CameraModal";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
 
@@ -61,11 +62,11 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     return () => { cropQueueRef.current.forEach(URL.revokeObjectURL); };
   }, []);
 
+  const [showCamera, setShowCamera] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
   const isEdit = !!editCard;
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -138,19 +139,15 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setUploading(false);
   }
 
-  // 카메라 버튼: 클라이언트 이미지 처리 없이 Cloudinary 직접 업로드 (OOM 방지)
-  async function handleCameraChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (!files.length) return;
+  // 카메라 캡처: Cloudinary 직접 업로드 (OOM 방지)
+  async function handleCameraCapture(file: File) {
+    setShowCamera(false);
     setUploading(true);
-    for (const file of files) {
-      try {
-        const { url, publicId } = await uploadToCloudinary(file);
-        setSlots((prev) => [...prev, { kind: "uploaded", url, publicId }]);
-      } catch {
-        setError("업로드 실패");
-      }
+    try {
+      const { url, publicId } = await uploadToCloudinary(file);
+      setSlots((prev) => [...prev, { kind: "uploaded", url, publicId }]);
+    } catch {
+      setError("업로드 실패");
     }
     setUploading(false);
   }
@@ -273,6 +270,12 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
 
   return (
     <>
+      {showCamera && (
+        <CameraModal
+          onCapture={handleCameraCapture}
+          onCancel={() => setShowCamera(false)}
+        />
+      )}
       {cropQueue[0] && (
         <ImageCropModal
           key={cropQueue[0]}
@@ -383,7 +386,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => cameraRef.current?.click()}
+                  onClick={() => setShowCamera(true)}
                   className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Camera size={16} />
@@ -395,13 +398,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 accept="image/*"
                 multiple
                 onChange={handleFileChange}
-                className="hidden"
-              />
-              <input
-                ref={cameraRef}
-                type="file"
-                accept="image/*"
-                onChange={handleCameraChange}
                 className="hidden"
               />
 
