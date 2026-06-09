@@ -6,6 +6,7 @@ import { ArrowUp, CalendarDays } from "lucide-react";
 import { format, subDays, subMonths, subYears, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
+import { cardBarGradient } from "@/lib/timeColor";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
@@ -229,7 +230,7 @@ export default function FeedPage() {
                       openModal(card.date, card.id);
                     }}
                   >
-                    <CardItem card={card} isDark={isDark} shareView={true} disableLightbox={true} />
+                    <CardItem card={card} isDark={isDark} shareView={true} disableLightbox={true} barGradient={cardBarGradient(new Date(card.created_at).getHours() + new Date(card.created_at).getMinutes() / 60, new Date(card.created_at).getHours() + new Date(card.created_at).getMinutes() / 60 + 1)} />
                   </div>
                 </div>
               );

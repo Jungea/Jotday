@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Link as LinkIcon, Plus, X, Check } from "lucide-react";
 import { CardItem } from "@/components/cards/CardItem";
+import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import type { Card } from "@/types";
@@ -186,18 +187,25 @@ export function DaySheet({
               <p className={`text-center text-sm py-12 ${sub}`}>카드가 없어요.</p>
             ) : (
               <div className="flex flex-col items-center gap-4 pb-6">
-                {cards.map((card) => (
-                  <div key={card.id} id={`day-sheet-${card.id}`} className="w-full max-w-sm">
-                    <CardItem
-                      card={card}
-                      isDark={isDark}
-                      onDelete={handleDelete}
-                      onEdit={setEditCard}
-                      onMove={handleMove}
-                      onSetRepresentative={handleSetRepresentative}
-                    />
-                  </div>
-                ))}
+                {cards.map((card, i) => {
+                  const toHour = (d: Date) => d.getHours() + d.getMinutes() / 60;
+                  const from = toHour(new Date(card.created_at));
+                  const next = cards[i + 1];
+                  const to = next ? toHour(new Date(next.created_at)) : from + 1;
+                  return (
+                    <div key={card.id} id={`day-sheet-${card.id}`} className="w-full max-w-sm">
+                      <CardItem
+                        card={card}
+                        isDark={isDark}
+                        onDelete={handleDelete}
+                        onEdit={setEditCard}
+                        onMove={handleMove}
+                        onSetRepresentative={handleSetRepresentative}
+                        barGradient={cardBarGradient(from, to)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

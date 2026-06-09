@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
+import { cardBarGradient } from "@/lib/timeColor";
 import { Logo } from "@/components/Logo";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
@@ -61,16 +62,22 @@ export default function ShareClient() {
         ) : data?.type === "card" ? (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             <div className="w-full max-w-sm">
-              <CardItem card={data.card} isDark={isDark} shareView={true} />
+              <CardItem card={data.card} isDark={isDark} shareView={true} barGradient={cardBarGradient(new Date(data.card.created_at).getHours() + new Date(data.card.created_at).getMinutes() / 60, new Date(data.card.created_at).getHours() + new Date(data.card.created_at).getMinutes() / 60 + 1)} />
             </div>
           </div>
         ) : data?.type === "date" ? (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
-            {data.cards.map((card) => (
-              <div key={card.id} className="w-full max-w-sm">
-                <CardItem card={card} isDark={isDark} shareView={true} />
-              </div>
-            ))}
+            {data.cards.map((card, i) => {
+              const toHour = (d: Date) => d.getHours() + d.getMinutes() / 60;
+              const from = toHour(new Date(card.created_at));
+              const next = data.cards[i + 1];
+              const to = next ? toHour(new Date(next.created_at)) : from + 1;
+              return (
+                <div key={card.id} className="w-full max-w-sm">
+                  <CardItem card={card} isDark={isDark} shareView={true} barGradient={cardBarGradient(from, to)} />
+                </div>
+              );
+            })}
           </div>
         ) : null}
       </main>

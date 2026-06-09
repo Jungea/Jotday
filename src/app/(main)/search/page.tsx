@@ -6,6 +6,7 @@ import { Search, X, Hash, CalendarDays } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
+import { cardBarGradient } from "@/lib/timeColor";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { DaySheet } from "@/components/ui/DaySheet";
 import { useThemeStore } from "@/store/theme";
@@ -186,7 +187,7 @@ function SearchContent() {
                       openModal(card.date, card.id);
                     }}
                   >
-                    <CardItem card={card} isDark={isDark} shareView={true} disableLightbox={true} />
+                    <CardItem card={card} isDark={isDark} shareView={true} disableLightbox={true} barGradient={cardBarGradient(new Date(card.created_at).getHours() + new Date(card.created_at).getMinutes() / 60, new Date(card.created_at).getHours() + new Date(card.created_at).getMinutes() / 60 + 1)} />
                   </div>
                 </div>
               );

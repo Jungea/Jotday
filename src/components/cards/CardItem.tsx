@@ -20,6 +20,7 @@ interface CardItemProps {
   onSetRepresentative?: (id: string) => void;
   shareView?: boolean;
   disableLightbox?: boolean;
+  barGradient?: string;
 }
 
 function useSwipe(count: number, onTap?: () => void) {
@@ -529,7 +530,7 @@ function ExpandableContent({ text, className, isDark }: { text: string; classNam
   );
 }
 
-export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, onMove, onSetRepresentative, shareView, disableLightbox }: CardItemProps) {
+export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, onMove, onSetRepresentative, shareView, disableLightbox, barGradient }: CardItemProps) {
   const theme = useThemeStore((s) => s.theme);
   const isDark = isDarkProp ?? theme === "dark";
   const { expiryDays } = useShareSettingsStore();
@@ -658,8 +659,14 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
           ? "bg-[#1c1c1c] border border-gray-800 shadow-none"
           : "bg-white shadow-sm border border-gray-200"
       }`}>
+        {barGradient && (
+          <div
+            className="absolute left-0 bottom-0 w-[3px] rounded-t-full pointer-events-none"
+            style={{ background: barGradient, top: '-6px' }}
+          />
+        )}
         {images.length > 0 && (
-          <div className={`overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
+          <div className={`relative z-[1] overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
             <ImageSwiper images={images} disableLightbox={disableLightbox} />
           </div>
         )}
