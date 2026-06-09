@@ -55,26 +55,50 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
+  async function compressForCrop(file: File): Promise<string> {
+    // createImageBitmap + OffscreenCanvas: 압축 후 원본 비트맵을 즉시 강제 해제
+    if (typeof createImageBitmap !== "undefined" && typeof OffscreenCanvas !== "undefined") {
+      try {
+        const bitmap = await createImageBitmap(file);
+        const { width, height } = bitmap;
+        const MAX = 1200;
+        const scale = Math.min(1, MAX / Math.max(width, height));
+        const w = Math.round(width * scale);
+        const h = Math.round(height * scale);
+        const canvas = new OffscreenCanvas(w, h);
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        bitmap.close(); // 원본 50MB 즉시 해제
+        const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.82 });
+        return URL.createObjectURL(blob);
+      } catch {
+        // 미지원 환경 fallback
+      }
+    }
+    const compressed = await imageCompression(file, {
+      maxWidthOrHeight: 1200,
+      maxSizeMB: 1,
+      useWebWorker: true,
+      fileType: "image/jpeg",
+      initialQuality: 0.82,
+    });
+    return URL.createObjectURL(compressed);
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
-    const srcs: string[] = [];
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      (files as (File | null)[])[i] = null; // 처리 즉시 참조 해제
       try {
-        const compressed = await imageCompression(file, {
-          maxWidthOrHeight: 1600,
-          maxSizeMB: 2,
-          useWebWorker: true,
-          fileType: "image/jpeg",
-          initialQuality: 0.85,
-        });
-        srcs.push(URL.createObjectURL(compressed));
+        const url = await compressForCrop(file);
+        setCropQueue((q) => [...q, url]);
       } catch {
         // 실패한 이미지는 건너뜀
       }
     }
-    if (srcs.length > 0) setCropQueue((q) => [...q, ...srcs]);
   }
 
   function handleCropConfirm(file: File) {
