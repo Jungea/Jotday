@@ -26,6 +26,12 @@ type ImageSlot =
   | { kind: "existing"; url: string; publicId: string }
   | { kind: "uploaded"; url: string; publicId: string };
 
+// Cloudinary URL에 리사이즈 파라미터 삽입 (썸네일·크롭 미리보기용)
+function cloudinaryResized(url: string, width: number): string {
+  if (!url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/w_${width},c_limit,q_auto,f_auto/`);
+}
+
 function initSlots(editCard?: Card): ImageSlot[] {
   if (!editCard) return [];
   if (editCard.images?.length > 0) {
@@ -169,10 +175,10 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setUploading(false);
   }
 
-  // 기존 슬롯 크롭 (Cloudinary URL → 크롭 모달)
+  // 기존 슬롯 크롭 (Cloudinary URL → 1600px로 크롭 모달)
   function handleCropSlot(index: number) {
     setCroppingSlotIndex(index);
-    setCropQueue((q) => [...q, slots[index].url]);
+    setCropQueue((q) => [...q, cloudinaryResized(slots[index].url, 1600)]);
   }
 
   function handleDragStart(e: DragEvent, index: number) {
@@ -343,7 +349,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={slot.url} alt="" className="w-full h-full object-cover pointer-events-none" />
+                      <img src={cloudinaryResized(slot.url, 400)} alt="" className="w-full h-full object-cover pointer-events-none" />
                       <button
                         type="button"
                         onClick={() => handleRemoveSlot(i)}
