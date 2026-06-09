@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { DragEvent } from "react";
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
@@ -46,6 +46,18 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
 
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [slots, setSlots] = useState<ImageSlot[]>(() => initSlots(editCard));
+
+  // unmount 시 누수된 Blob URL 정리
+  const slotsRef = useRef(slots);
+  const cropQueueRef = useRef(cropQueue);
+  useEffect(() => { slotsRef.current = slots; }, [slots]);
+  useEffect(() => { cropQueueRef.current = cropQueue; }, [cropQueue]);
+  useEffect(() => {
+    return () => {
+      slotsRef.current.forEach((s) => { if (s.kind === "new") URL.revokeObjectURL(s.url); });
+      cropQueueRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,7 +149,11 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   }
 
   function handleRemoveSlot(index: number) {
-    setSlots((prev) => prev.filter((_, i) => i !== index));
+    setSlots((prev) => {
+      const slot = prev[index];
+      if (slot.kind === "new") URL.revokeObjectURL(slot.url);
+      return prev.filter((_, i) => i !== index);
+    });
   }
 
 
