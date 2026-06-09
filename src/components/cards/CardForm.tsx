@@ -139,17 +139,11 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setUploading(false);
   }
 
-  // 카메라 캡처: Cloudinary 직접 업로드 (OOM 방지)
-  async function handleCameraCapture(file: File) {
+  // 카메라 캡처: 크롭 모달로 전달 (비디오 프레임은 ~8MB로 OOM 없음)
+  function handleCameraCapture(file: File) {
     setShowCamera(false);
-    setUploading(true);
-    try {
-      const { url, publicId } = await uploadToCloudinary(file);
-      setSlots((prev) => [...prev, { kind: "uploaded", url, publicId }]);
-    } catch {
-      setError("업로드 실패");
-    }
-    setUploading(false);
+    const url = URL.createObjectURL(file);
+    setCropQueue((q) => [...q, url]);
   }
 
   // 크롭 확인: 모달을 먼저 닫고 Cloudinary 업로드
