@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>텍스트 카드 UI — 컬러 바 그라데이션</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #111;
+    color: #e5e5e5;
+    padding: 24px 16px 48px;
+    min-height: 100vh;
+  }
+
+  h2 {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #555;
+    margin: 40px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #222;
+  }
+  h2:first-of-type { margin-top: 0; }
+
+  .cards { display: flex; flex-direction: column; gap: 8px; max-width: 400px; margin: 0 auto; }
+
+  /* ── 공통 카드 ── */
+  .card {
+    background: #1c1c1c;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* 이미지 */
+  .card img { width: 100%; height: 210px; object-fit: cover; display: block; }
+
+  /* 컬러 바 + 본문 행 */
+  .card .row {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .card .bar {
+    width: 3px;
+    flex-shrink: 0;
+    /* JS로 background 주입 */
+  }
+  .card .body {
+    flex: 1;
+    padding: 12px 14px;
+  }
+  .card .time  { font-size: 11px; color: #555; margin-bottom: 5px; }
+  .card .text  { font-size: 14px; color: #ccc; line-height: 1.6; }
+  .card .tag   { color: #60a5fa; }
+
+  /* 이미지 카드의 바는 이미지 아래에만 표시 */
+  .card.has-img .bar { align-self: stretch; }
+
+  /* ── 토글 ── */
+  .theme-toggle {
+    position: fixed; top: 16px; right: 16px;
+    background: #2a2a2a; border: none; color: #aaa;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; z-index: 100;
+  }
+
+  /* ── Light ── */
+  body.light { background: #f4f4f5; color: #111; }
+  body.light h2 { color: #aaa; border-color: #e0e0e0; }
+  body.light .card { background: white; border-color: #e8e8e8; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  body.light .card .time { color: #bbb; }
+  body.light .card .text { color: #374151; }
+  body.light .theme-toggle { background: #e5e5e5; color: #333; }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="document.body.classList.toggle('light')">라이트/다크</button>
+
+<div class="cards">
+  <h2>이전 (고정 색상)</h2>
+
+  <!-- 데이터 속성으로 시간 지정, JS가 색 계산 -->
+  <div class="card has-img" data-time="8:05" data-type="image">
+    <img src="https://picsum.photos/seed/a1/400/210" alt="">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오전 8:05</div>
+        <div class="text">출근길 하늘</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="9:23">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오전 9:23</div>
+        <div class="text">회의 준비하면서 자료 정리. 생각보다 오래 걸림. <span class="tag">#업무</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="13:10">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 1:10</div>
+        <div class="text">점심으로 김치찌개. 국물이 진해서 좋았다. <span class="tag">#식사</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="14:45">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 2:45</div>
+        <div class="text">점심 먹고 산책. 날씨가 흐려서 좀 선선했다. <span class="tag">#산책</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card has-img" data-time="18:30" data-type="image">
+    <img src="https://picsum.photos/seed/b2/400/210" alt="">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 6:30</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="21:30">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 9:30</div>
+        <div class="text">책 읽다가 좋은 문장 발견. 내일 다시 읽어봐야겠다. <span class="tag">#독서</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 그라데이션 버전 ── -->
+  <h2 style="margin-top:48px">그라데이션 (시간 흐름)</h2>
+
+  <div class="card has-img" data-time="8:05" data-type="image" data-grad="true">
+    <img src="https://picsum.photos/seed/a1/400/210" alt="">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오전 8:05</div>
+        <div class="text">출근길 하늘</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="9:23" data-grad="true">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오전 9:23</div>
+        <div class="text">회의 준비하면서 자료 정리. 생각보다 오래 걸림. <span class="tag">#업무</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="13:10" data-grad="true">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 1:10</div>
+        <div class="text">점심으로 김치찌개. 국물이 진해서 좋았다. <span class="tag">#식사</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="14:45" data-grad="true">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 2:45</div>
+        <div class="text">점심 먹고 산책. 날씨가 흐려서 좀 선선했다. <span class="tag">#산책</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card has-img" data-time="18:30" data-type="image" data-grad="true">
+    <img src="https://picsum.photos/seed/b2/400/210" alt="">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 6:30</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-time="21:30" data-grad="true">
+    <div class="row">
+      <div class="bar"></div>
+      <div class="body">
+        <div class="time">오후 9:30</div>
+        <div class="text">책 읽다가 좋은 문장 발견. 내일 다시 읽어봐야겠다. <span class="tag">#독서</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// 하루 시간대 → 색상 키프레임 (시간, R, G, B)
+const TIMELINE = [
+  [  0,  30,  58, 138 ],  // 자정   — 남색
+  [  5,  49,  46, 129 ],  // 새벽 5 — 인디고
+  [  7, 249, 115,  22 ],  // 오전 7 — 주황 (해돋이)
+  [ 10, 251, 191,  36 ],  // 오전10 — 노랑
+  [ 13,   6, 182, 212 ],  // 오후 1 — 하늘
+  [ 17,  59, 130, 246 ],  // 오후 5 — 파랑
+  [ 19, 168,  85, 247 ],  // 오후 7 — 보라 (일몰)
+  [ 22,  99,  30, 120 ],  // 밤 10  — 짙은 보라
+  [ 24,  30,  58, 138 ],  // 자정   — 남색 (순환)
+];
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function timeToColor(h) {
+  for (let i = 0; i < TIMELINE.length - 1; i++) {
+    const [h0, r0, g0, b0] = TIMELINE[i];
+    const [h1, r1, g1, b1] = TIMELINE[i + 1];
+    if (h >= h0 && h <= h1) {
+      const t = (h - h0) / (h1 - h0);
+      return [lerp(r0,r1,t)|0, lerp(g0,g1,t)|0, lerp(b0,b1,t)|0];
+    }
+  }
+  return TIMELINE[0].slice(1);
+}
+
+function rgb([r,g,b]) { return `rgb(${r},${g},${b})`; }
+
+function parseHour(str) {
+  const [h, m] = str.split(':').map(Number);
+  return h + m / 60;
+}
+
+// ── 고정 색상 (기존): 시간대 구간으로 단색 그라디언트 ──
+const fixedPalette = {
+  dawn:  ['#3b82f6','#6366f1'],
+  morn:  ['#f97316','#fb923c'],
+  noon:  ['#06b6d4','#3b82f6'],
+  eve:   ['#a855f7','#ec4899'],
+};
+function fixedColor(h) {
+  if (h < 6)  return fixedPalette.dawn;
+  if (h < 12) return fixedPalette.morn;
+  if (h < 18) return fixedPalette.noon;
+  return fixedPalette.eve;
+}
+
+// 카드 목록 (그라데이션 여부로 분리)
+const allCards = [...document.querySelectorAll('.card[data-time]')];
+const fixedCards = allCards.filter(c => !c.dataset.grad);
+const gradCards  = allCards.filter(c =>  c.dataset.grad);
+
+// ── 고정 색상 적용 ──
+fixedCards.forEach(card => {
+  const h = parseHour(card.dataset.time);
+  const [top, bot] = fixedColor(h);
+  const bar = card.querySelector('.bar');
+  bar.style.background = `linear-gradient(180deg, ${top}, ${bot})`;
+});
+
+// ── 그라데이션 적용: 이 카드의 시간 색 → 다음 카드의 시간 색 ──
+gradCards.forEach((card, i) => {
+  const h0 = parseHour(card.dataset.time);
+  const h1 = i + 1 < gradCards.length
+    ? parseHour(gradCards[i + 1].dataset.time)
+    : h0 + 1;
+
+  const top = rgb(timeToColor(h0));
+  const bot = rgb(timeToColor(h1));
+  const bar = card.querySelector('.bar');
+  bar.style.background = `linear-gradient(180deg, ${top}, ${bot})`;
+});
+</script>
+</body>
+</html>
