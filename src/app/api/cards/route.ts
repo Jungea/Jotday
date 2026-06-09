@@ -186,18 +186,8 @@ export async function POST(request: NextRequest) {
   const time = formData.get("time") as string | null;
   const tagsRaw = formData.get("tags") as string | null;
   const tags = tagsRaw ? JSON.parse(tagsRaw) : [];
-  const imageFiles = formData.getAll("image") as File[];
-
-  const uploadedImages: { url: string; public_id: string }[] = [];
-  for (const file of imageFiles) {
-    if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-      const dataUri = `data:${file.type};base64,${base64}`;
-      const uploaded = await uploadImage(dataUri, user.id);
-      uploadedImages.push({ url: uploaded.url, public_id: uploaded.public_id });
-    }
-  }
+  const imagesRaw = formData.get("images") as string | null;
+  const uploadedImages: { url: string; public_id: string }[] = imagesRaw ? JSON.parse(imagesRaw) : [];
 
   const insertData: Record<string, unknown> = {
     user_id: user.id,
@@ -280,9 +270,7 @@ export async function PATCH(request: NextRequest) {
   const time = formData.get("time") as string | null;
   const tagsRaw2 = formData.get("tags") as string | null;
   const patchTags = tagsRaw2 ? JSON.parse(tagsRaw2) : undefined;
-  const updateImages = formData.get("update_images") === "true";
-  const keepIds = formData.getAll("keep_id") as string[];
-  const newFiles = (formData.getAll("image") as File[]).filter((f) => f && f.size > 0);
+  const imagesRaw2 = formData.get("images") as string | null;
 
   const { data: existing } = await supabase
     .from("cards")
@@ -295,36 +283,23 @@ export async function PATCH(request: NextRequest) {
 
   let newImages: { url: string; public_id: string }[] | undefined = undefined;
 
-  if (updateImages) {
+  if (imagesRaw2 !== null) {
     const { deleteImage } = await import("@/lib/cloudinary/config");
+    const newImageList: { url: string; public_id: string }[] = JSON.parse(imagesRaw2);
     const storedImages: { url: string; public_id: string }[] = existing.images ?? [];
 
-    // Legacy single-image cards: add to storedImages if images array is empty
+    // Legacy single-image cards
     if (storedImages.length === 0 && existing.image_public_id) {
       storedImages.push({ url: "", public_id: existing.image_public_id });
     }
 
-    // Delete images not in keepIds
+    // 새 목록에 없는 이미지 Cloudinary에서 삭제
+    const newPublicIds = new Set(newImageList.map((img) => img.public_id));
     for (const img of storedImages) {
-      if (!keepIds.includes(img.public_id)) await deleteImage(img.public_id);
+      if (!newPublicIds.has(img.public_id)) await deleteImage(img.public_id);
     }
 
-    // Keep existing images in slot order
-    const kept = keepIds
-      .map((id) => storedImages.find((img) => img.public_id === id))
-      .filter((img): img is { url: string; public_id: string } => !!img);
-
-    // Upload new files
-    const uploaded: { url: string; public_id: string }[] = [];
-    for (const file of newFiles) {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-      const dataUri = `data:${file.type};base64,${base64}`;
-      const result = await uploadImage(dataUri, user.id);
-      uploaded.push({ url: result.url, public_id: result.public_id });
-    }
-
-    newImages = [...kept, ...uploaded];
+    newImages = newImageList;
   }
 
   const updates: Record<string, unknown> = {

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import type { DragEvent } from "react";
 import imageCompression from "browser-image-compression";
 import { format } from "date-fns";
-import { X, Upload, Camera } from "lucide-react";
+import { X, Upload, Camera, Scissors } from "lucide-react";
 
 function extractTags(text: string): string[] {
   const matches = text.match(/#([^\s#]+)/g) ?? [];
@@ -24,7 +24,7 @@ interface CardFormProps {
 
 type ImageSlot =
   | { kind: "existing"; url: string; publicId: string }
-  | { kind: "new"; url: string; file: File };
+  | { kind: "uploaded"; url: string; publicId: string };
 
 function initSlots(editCard?: Card): ImageSlot[] {
   if (!editCard) return [];
@@ -45,21 +45,17 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const [manualTime, setManualTime] = useState(false);
 
   const [cropQueue, setCropQueue] = useState<string[]>([]);
+  const [croppingSlotIndex, setCroppingSlotIndex] = useState<number | null>(null);
   const [slots, setSlots] = useState<ImageSlot[]>(() => initSlots(editCard));
 
-  // unmount 시 누수된 Blob URL 정리
-  const slotsRef = useRef(slots);
+  // unmount 시 cropQueue의 Blob URL 정리
   const cropQueueRef = useRef(cropQueue);
-  useEffect(() => { slotsRef.current = slots; }, [slots]);
   useEffect(() => { cropQueueRef.current = cropQueue; }, [cropQueue]);
   useEffect(() => {
-    return () => {
-      slotsRef.current.forEach((s) => { if (s.kind === "new") URL.revokeObjectURL(s.url); });
-      cropQueueRef.current.forEach((url) => URL.revokeObjectURL(url));
-    };
+    return () => { cropQueueRef.current.forEach(URL.revokeObjectURL); };
   }, []);
 
-  const [compressing, setCompressing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -67,22 +63,44 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const isEdit = !!editCard;
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const busy = uploading || loading;
 
+  async function uploadToCloudinary(file: File): Promise<{ url: string; publicId: string }> {
+    const signRes = await fetch("/api/upload-sign");
+    if (!signRes.ok) throw new Error("서명 실패");
+    const { signature, timestamp, folder, cloudName, apiKey } = await signRes.json();
+
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("signature", signature);
+    fd.append("timestamp", String(timestamp));
+    fd.append("folder", folder);
+    fd.append("api_key", apiKey);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) throw new Error("업로드 실패");
+    const data = await res.json();
+    return { url: data.secure_url, publicId: data.public_id };
+  }
+
+  // 갤러리 전용: 압축 후 크롭 모달에 추가
   async function compressForCrop(file: File): Promise<string> {
     if (typeof createImageBitmap !== "undefined" && typeof OffscreenCanvas !== "undefined") {
       try {
         const MAX = 1200;
-        // resizeWidth 힌트: 브라우저가 JPEG를 처음부터 작게 디코딩할 수 있으면 48MB 스파이크 방지
         const bitmap = await createImageBitmap(file, { resizeWidth: MAX, resizeQuality: "medium" });
         const { width, height } = bitmap;
         const canvas = new OffscreenCanvas(width, height);
         const ctx = canvas.getContext("2d")!;
         ctx.drawImage(bitmap, 0, 0);
-        bitmap.close(); // 원본 즉시 해제
+        bitmap.close();
         const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.82 });
         return URL.createObjectURL(blob);
       } catch {
-        // 미지원 환경 fallback
+        // fallback
       }
     }
     const compressed = await imageCompression(file, {
@@ -95,28 +113,66 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     return URL.createObjectURL(compressed);
   }
 
+  // 갤러리 버튼: 압축 → 크롭 모달 (크롭 확인 후 Cloudinary 업로드)
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
-    setCompressing(true);
+    setUploading(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      (files as (File | null)[])[i] = null; // 처리 즉시 참조 해제
+      (files as (File | null)[])[i] = null;
       try {
         const url = await compressForCrop(file);
         setCropQueue((q) => [...q, url]);
       } catch {
-        // 실패한 이미지는 건너뜀
+        // 건너뜀
       }
     }
-    setCompressing(false);
+    setUploading(false);
   }
 
-  function handleCropConfirm(file: File) {
-    const url = URL.createObjectURL(file);
-    setSlots((prev) => [...prev, { kind: "new", url, file }]);
+  // 카메라 버튼: 클라이언트 이미지 처리 없이 Cloudinary 직접 업로드 (OOM 방지)
+  async function handleCameraChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!files.length) return;
+    setUploading(true);
+    for (const file of files) {
+      try {
+        const { url, publicId } = await uploadToCloudinary(file);
+        setSlots((prev) => [...prev, { kind: "uploaded", url, publicId }]);
+      } catch {
+        setError("업로드 실패");
+      }
+    }
+    setUploading(false);
+  }
+
+  // 크롭 확인: 모달을 먼저 닫고 Cloudinary 업로드
+  async function handleCropConfirm(file: File) {
+    const idx = croppingSlotIndex;
+    setCroppingSlotIndex(null);
     setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); });
+    setUploading(true);
+    try {
+      const { url, publicId } = await uploadToCloudinary(file);
+      const newSlot: ImageSlot = { kind: "uploaded", url, publicId };
+      if (idx !== null) {
+        setSlots((prev) => prev.map((s, i) => i === idx ? newSlot : s));
+      } else {
+        setSlots((prev) => [...prev, newSlot]);
+      }
+    } catch {
+      setError("업로드 실패");
+    }
+    setUploading(false);
+  }
+
+  // 기존 슬롯 크롭 (Cloudinary URL → 크롭 모달)
+  function handleCropSlot(index: number) {
+    setCroppingSlotIndex(index);
+    setCropQueue((q) => [...q, slots[index].url]);
   }
 
   function handleDragStart(e: DragEvent, index: number) {
@@ -149,21 +205,13 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   }
 
   function handleRemoveSlot(index: number) {
-    setSlots((prev) => {
-      const slot = prev[index];
-      if (slot.kind === "new") URL.revokeObjectURL(slot.url);
-      return prev.filter((_, i) => i !== index);
-    });
+    setSlots((prev) => prev.filter((_, i) => i !== index));
   }
-
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
-    const existingSlots = slots.filter((s): s is Extract<ImageSlot, { kind: "existing" }> => s.kind === "existing");
-    const newSlots = slots.filter((s): s is Extract<ImageSlot, { kind: "new" }> => s.kind === "new");
 
     if (isEdit) {
       const formData = new FormData();
@@ -177,13 +225,12 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         ? editCard.images.map((i) => i.public_id)
         : editCard.image_public_id ? [editCard.image_public_id] : []
       ).join(",");
-      const currentIds = existingSlots.map((s) => s.publicId).join(",");
-      const imagesChanged = originalIds !== currentIds || newSlots.length > 0;
+      const currentIds = slots.map((s) => s.publicId).join(",");
 
-      if (imagesChanged) {
-        formData.append("update_images", "true");
-        for (const s of existingSlots) formData.append("keep_id", s.publicId);
-        for (const s of newSlots) formData.append("image", s.file);
+      if (originalIds !== currentIds) {
+        formData.append("images", JSON.stringify(
+          slots.map((s) => ({ url: s.url, public_id: s.publicId }))
+        ));
       }
 
       const res = await fetch("/api/cards", { method: "PATCH", body: formData });
@@ -201,7 +248,9 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       if (content) formData.append("content", content);
       formData.append("time", new Date(`${date}T${manualTime ? time : format(new Date(), "HH:mm")}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
-      for (const s of newSlots) formData.append("image", s.file);
+      formData.append("images", JSON.stringify(
+        slots.map((s) => ({ url: s.url, public_id: s.publicId }))
+      ));
       const res = await fetch("/api/cards", { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json();
@@ -214,7 +263,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setLoading(false);
   }
 
-  const newCount = slots.filter((s) => s.kind === "new").length;
+  const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
 
   return (
     <>
@@ -222,10 +271,13 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         <ImageCropModal
           key={cropQueue[0]}
           src={cropQueue[0]}
-          current={slots.length + 1}
-          total={slots.length + cropQueue.length}
+          current={croppingSlotIndex !== null ? undefined : slots.length + 1}
+          total={croppingSlotIndex !== null ? undefined : slots.length + cropQueue.length}
           onConfirm={handleCropConfirm}
-          onCancel={() => setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); })}
+          onCancel={() => {
+            setCroppingSlotIndex(null);
+            setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); });
+          }}
         />
       )}
       <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
@@ -299,6 +351,13 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       >
                         <X size={12} />
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCropSlot(i)}
+                        className="absolute bottom-1 right-1 bg-black/50 text-white rounded-full p-0.5"
+                      >
+                        <Scissors size={12} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -308,18 +367,18 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={compressing}
+                  disabled={busy}
                   onClick={() => fileRef.current?.click()}
-                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${compressing ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Upload size={16} />
-                  <span className="text-sm">{compressing ? "처리 중..." : slots.length > 0 ? "이미지 추가" : "업로드"}</span>
+                  <span className="text-sm">{uploading ? "처리 중..." : slots.length > 0 ? "이미지 추가" : "업로드"}</span>
                 </button>
                 <button
                   type="button"
-                  disabled={compressing}
+                  disabled={busy}
                   onClick={() => cameraRef.current?.click()}
-                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${compressing ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Camera size={16} />
                 </button>
@@ -337,7 +396,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 type="file"
                 accept="image/*"
                 capture="environment"
-                onChange={handleFileChange}
+                onChange={handleCameraChange}
                 className="hidden"
               />
 
@@ -367,11 +426,13 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               type="submit"
               form="card-form"
               className="flex-1"
-              disabled={loading}
+              disabled={busy}
             >
               {loading
                 ? (isEdit ? "수정 중..." : "저장 중...")
-                : (isEdit ? "수정" : newCount > 1 ? `저장 (${newCount})` : "저장")}
+                : uploading
+                ? "업로드 중..."
+                : (isEdit ? "수정" : uploadedCount > 1 ? `저장 (${uploadedCount})` : "저장")}
             </Button>
           </div>
         </div>
