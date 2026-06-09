@@ -401,7 +401,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 ref={cameraRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handleCameraChange}
                 className="hidden"
               />
