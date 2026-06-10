@@ -37,7 +37,7 @@ npm run lint     # ESLint
 - `(main)/search` — 태그·전문 검색 (`?q=키워드&tags=태그1,태그2`)
 - `(main)/settings` — 테마·카드 액션·피드 필터 설정
 - `(main)/links` — 공유 링크 관리 및 만료 기간 설정
-- `api/cards` — 카드 CRUD + 이미지 업로드 + 검색
+- `api/cards` — 카드 CRUD + 이미지 업로드 + 검색 + 태그 목록(`?alltags=true`)
 - `api/share` — 공유 토큰 생성·조회·삭제
 - `api/settings` — 사용자 설정 조회(GET) · 저장(PATCH), upsert on user_id
 - `share/[token]` — 공개 공유 페이지 (인증 불필요, `generateMetadata`로 OG 태그 동적 생성)
@@ -48,7 +48,9 @@ npm run lint     # ESLint
 2. **달력**: `GET /api/cards?month=YYYY-MM` → 날짜별 대표 이미지·카드 수 집계(`DayMeta`)
 3. **날짜 상세**: `GET /api/cards?date=YYYY-MM-DD` → 해당 날의 카드 목록
 4. **카드 생성**: `CardForm` → `POST /api/cards` (FormData) → Cloudinary 업로드 → Supabase 저장. 본문의 `#태그`는 자동 추출되어 `tags[]`로 저장
-5. **대표 카드**: `PATCH /api/cards` with `set_representative=true` → 해당 날짜의 기존 대표 해제 후 지정
+5. **대표 카드**: `PATCH /api/cards` with `set_representative=true` → 해당 날짜의 기존 대표 해제 후 지정. `unset_representative=true` → 해당 카드의 대표만 해제(토글 해제용)
+5a. **태그 자동완성**: `GET /api/cards?alltags=true` → 사용자의 전체 태그 목록 반환. `CardForm`에서 `#` 입력 시 드롭다운 표시; mirror div 기법으로 커서 위치를 픽셀 좌표로 계산해 `fixed` 포지셔닝
+5b. **빠른 카메라**: 달력 홈 FAB → `CameraModal` → `ImageCropModal` → `/api/upload-sign`(Cloudinary 서명) → Cloudinary 업로드 → `POST /api/cards`(오늘 날짜로 즉시 저장)
 6. **검색**: `GET /api/cards?q=키워드&tags=태그1,태그2&page=N` → pg_trgm(content) + GIN(tags) 인덱스
 7. **공유**: `POST /api/share` → `share_tokens` 테이블에 토큰 생성. `GET /api/share?token=...` → 공개 카드 조회
 8. **설정 동기화**: `SettingsSync` 컴포넌트가 `(main)/layout.tsx`에 마운트. 앱 진입 시 `GET /api/settings`로 서버 값을 스토어에 덮어쓰고, 이후 변경 시 500ms 디바운스 후 `PATCH /api/settings`로 저장
@@ -74,6 +76,7 @@ Zustand + `persist` (localStorage 캐시) + Supabase 서버 동기화:
 - `src/store/cardActions.ts` — 카드 액션 버튼 순서·핀 설정
 - `src/store/feedPresets.ts` — 피드 기간 필터 프리셋 순서·숨김
 - `src/store/shareSettings.ts` — 공유 링크 만료 기간
+- `src/store/toast.ts` — 전역 토스트 알림 큐 (persist 없음). `addToast(message)` / `removeToast(id)`. `ToastContainer`가 `(main)/layout.tsx`에 마운트되어 어디서든 접근 가능
 
 localStorage는 첫 페인트용 캐시. 실제 값은 `user_settings` 테이블의 JSONB 컬럼(`card_actions`, `feed_presets`, `share_settings`)에 저장되며 `SettingsSync`가 마운트 시 로드해 덮어씀.
 
@@ -94,6 +97,19 @@ localStorage는 첫 페인트용 캐시. 실제 값은 `user_settings` 테이블
 - `content` gin_trgm_ops 인덱스 (빠른 ILIKE)
 
 DB 구조 변경 시 `supabase/schema.sql`에 반영한다. 사용자에게 안내할 때는 실행용 수정 쿼리(ALTER/UPDATE)로 알려주되, SQL 파일에는 최초 생성 기준 INSERT 형태로 추가한다.
+
+### PWA
+
+수동 서비스 워커(`public/sw.js`) — Next.js 16 Turbopack 환경에서 webpack 기반 PWA 라이브러리(`@ducanh2912/next-pwa` 등)는 동작하지 않으므로 직접 작성.
+
+- `/_next/static/` — 콘텐츠 해시 기반 파일이므로 영구 캐시 (cache-first)
+- 이미지·폰트(`.png|jpg|webp|woff2?`, `/_next/image`) — cache-first
+- 페이지·API — 항상 네트워크 우선 (캐시 없음)
+- `activate` 시 `jotday-` 접두사의 이전 캐시 자동 삭제
+
+`PWAUpdatePrompt` 컴포넌트가 `/sw.js` 등록 및 `controllerchange` 이벤트 감지 → 업데이트 토스트 표시.
+
+`public/sw.js`는 빌드 산출물이 아닌 수동 관리 파일이므로 git에 커밋해야 한다.
 
 ### Build Version
 
