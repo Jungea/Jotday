@@ -242,6 +242,19 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(data);
   }
 
+  // 대표 카드 해제
+  if (formData.get("unset_representative") === "true") {
+    const { data, error } = await supabase
+      .from("cards")
+      .update({ is_representative: false })
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  }
+
   // 대표 카드 설정 (별도 처리)
   if (formData.get("set_representative") === "true") {
     const { data: card } = await supabase

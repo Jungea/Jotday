@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Link as LinkIcon, Plus, X, Check } from "lucide-react";
+import { Link as LinkIcon, Plus, X } from "lucide-react";
 import { CardItem } from "@/components/cards/CardItem";
 import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useShareSettingsStore } from "@/store/shareSettings";
+import { useToastStore } from "@/store/toast";
 import type { Card } from "@/types";
 
 interface DaySheetProps {
@@ -45,8 +46,8 @@ export function DaySheet({
   const [loading, setLoading] = useState(true);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [linked, setLinked] = useState(false);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
+  const addToast = useToastStore((s) => s.addToast);
 
   useEffect(() => {
     setLoading(true);
@@ -102,12 +103,16 @@ export function DaySheet({
   }
 
   async function handleSetRepresentative(id: string) {
+    const isCurrentlyRep = cards.find((c) => c.id === id)?.is_representative;
     const fd = new FormData();
     fd.append("id", id);
-    fd.append("set_representative", "true");
+    fd.append(isCurrentlyRep ? "unset_representative" : "set_representative", "true");
     const res = await fetch("/api/cards", { method: "PATCH", body: fd });
     if (res.ok) {
-      setCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
+      setCards((prev) => {
+        if (isCurrentlyRep) return prev.map((c) => c.id === id ? { ...c, is_representative: false } : c);
+        return prev.map((c) => ({ ...c, is_representative: c.id === id }));
+      });
       onDataChange?.();
     }
   }
@@ -122,8 +127,7 @@ export function DaySheet({
     const { token } = await res.json();
     const url = `${window.location.origin}/share/${token}`;
     await navigator.clipboard.writeText(url);
-    setLinked(true);
-    setTimeout(() => setLinked(false), 2000);
+    addToast("링크가 복사됐어요");
   }
 
   function refresh() {
@@ -165,7 +169,7 @@ export function DaySheet({
               {headerActions}
               {showShareButton && (
                 <button onClick={handleShareDate} className={iconBtn}>
-                  {linked ? <Check size={16} /> : <LinkIcon size={16} />}
+                  <LinkIcon size={16} />
                 </button>
               )}
               {showAddButton && (

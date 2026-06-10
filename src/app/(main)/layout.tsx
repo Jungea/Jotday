@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ThemeWrapper } from "@/components/ui/ThemeWrapper";
 import { SettingsSync } from "@/components/ui/SettingsSync";
+import { ToastContainer } from "@/components/ui/Toast";
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -11,6 +12,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <ThemeWrapper>
       <SettingsSync />
+      <ToastContainer />
       {children}
     </ThemeWrapper>
   );

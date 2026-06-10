@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useCardActionsStore } from "@/store/cardActions";
+import { useToastStore } from "@/store/toast";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Card } from "@/types";
 
@@ -535,6 +536,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   const isDark = isDarkProp ?? theme === "dark";
   const { expiryDays } = useShareSettingsStore();
   const { order, pinned } = useCardActionsStore();
+  const addToast = useToastStore((s) => s.addToast);
   const p = (id: string) => pinned.includes(id as never);
   const timeLabel = format(new Date(card.created_at), "HH:mm");
   const [sharing, setSharing] = useState(false);
@@ -566,6 +568,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
       if (res.ok) {
         const newCard = await res.json();
         onCopy?.(newCard.id);
+        addToast("카드가 복사됐어요");
       }
     } finally {
       setCopying(false);
@@ -586,6 +589,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
         await navigator.clipboard.writeText(url);
         setLinked(true);
         setTimeout(() => setLinked(false), 2000);
+        addToast("링크가 복사됐어요");
       }
     } finally {
       setSharing(false);
@@ -597,9 +601,16 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
     try {
       const formData = new FormData();
       formData.append("id", card.id);
-      formData.append("set_representative", "true");
+      if (isRep) {
+        formData.append("unset_representative", "true");
+      } else {
+        formData.append("set_representative", "true");
+      }
       const res = await fetch("/api/cards", { method: "PATCH", body: formData });
-      if (res.ok) onSetRepresentative?.(card.id);
+      if (res.ok) {
+        onSetRepresentative?.(card.id);
+        addToast(isRep ? "대표 설정이 해제됐어요" : "대표 카드로 설정됐어요");
+      }
     } finally {
       setStarring(false);
     }
@@ -613,7 +624,10 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
       fd.append("id", card.id);
       fd.append("move_to_date", moveTargetDate);
       const res = await fetch("/api/cards", { method: "PATCH", body: fd });
-      if (res.ok) onMove?.(card.id);
+      if (res.ok) {
+        onMove?.(card.id);
+        addToast("카드를 이동했어요");
+      }
     } finally {
       setMoving(false);
     }
@@ -700,7 +714,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
           </div>
         </div>
 
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
+        <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
           <ActionButtons size={14} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
             showMore={showMore} setShowMore={setShowMore}
             onDownload={handleDownload} sharing={sharing} linked={linked}
