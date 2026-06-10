@@ -654,46 +654,48 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   return (
     <>
       <div id={`card-${card.id}`} className={`rounded-xl ${repGlow}`}>
-      <div className={`relative rounded-xl group ${
+      <div className={`relative rounded-xl overflow-hidden group ${
         isDark
           ? "bg-[#1c1c1c] border border-gray-800 shadow-none"
           : "bg-white shadow-sm border border-gray-200"
       }`}>
-        {barGradient && (
-          <div
-            className="absolute left-0 bottom-0 w-[3px] rounded-t-full pointer-events-none"
-            style={{ background: barGradient, top: '-6px' }}
-          />
-        )}
         {images.length > 0 && (
           <div className={`relative z-[1] overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
             <ImageSwiper images={images} disableLightbox={disableLightbox} />
           </div>
         )}
-        <div className="p-4">
-          {card.content && (
-            <ExpandableContent
-              text={card.content}
-              className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
-              isDark={isDark}
+        <div className="flex items-stretch">
+          {barGradient && (
+            <div
+              className="w-[3px] flex-shrink-0"
+              style={{ background: barGradient }}
             />
           )}
-          <div className="flex items-center justify-between mt-2">
-            <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
-            <div className="flex gap-1 sm:hidden items-center">
-              <ActionButtons size={13} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
-                showMore={showMore} setShowMore={setShowMore}
-                onDownload={handleDownload} sharing={sharing} linked={linked}
-                onLink={shareView ? undefined : handleShareLink}
-                onStar={shareView ? undefined : handleStar}
-                isRep={isRep} starColor={starColor} starDimColor={starDimColor}
-                onEdit={onEdit ? () => onEdit(card) : undefined}
-                onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
-                onCopy={onCopy ? handleCopy : undefined} copying={copying}
-                onMoveClick={onMove ? () => setShowMoveModal(true) : undefined} moving={moving}
-                starring={starring} deleting={deleting}
-                menuDir="up"
+          <div className="flex-1 p-4">
+            {card.content && (
+              <ExpandableContent
+                text={card.content}
+                className={`text-sm leading-relaxed ${isDark ? "text-gray-300" : "text-gray-700"}`}
+                isDark={isDark}
               />
+            )}
+            <div className="flex items-center justify-between mt-2">
+              <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
+              <div className="flex gap-1 sm:hidden items-center">
+                <ActionButtons size={13} btnBg={btnBg} isDark={isDark} p={effectiveP} order={effectiveOrder}
+                  showMore={showMore} setShowMore={setShowMore}
+                  onDownload={handleDownload} sharing={sharing} linked={linked}
+                  onLink={shareView ? undefined : handleShareLink}
+                  onStar={shareView ? undefined : handleStar}
+                  isRep={isRep} starColor={starColor} starDimColor={starDimColor}
+                  onEdit={onEdit ? () => onEdit(card) : undefined}
+                  onDelete={onDelete ? () => setShowDeleteConfirm(true) : undefined}
+                  onCopy={onCopy ? handleCopy : undefined} copying={copying}
+                  onMoveClick={onMove ? () => setShowMoveModal(true) : undefined} moving={moving}
+                  starring={starring} deleting={deleting}
+                  menuDir="up"
+                />
+              </div>
             </div>
           </div>
         </div>
