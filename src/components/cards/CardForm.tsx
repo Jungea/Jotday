@@ -51,6 +51,20 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
   const [manualTime, setManualTime] = useState(false);
 
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  const [tagQuery, setTagQuery] = useState<string | null>(null);
+  const [activeSuggestion, setActiveSuggestion] = useState(0);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    fetch("/api/cards?alltags=true")
+      .then((r) => r.json())
+      .then((tags) => setAllTags(tags))
+      .catch(() => {});
+  }, []);
+
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [croppingSlotIndex, setCroppingSlotIndex] = useState<number | null>(null);
   const [slots, setSlots] = useState<ImageSlot[]>(() => initSlots(editCard));
@@ -260,6 +274,100 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setLoading(false);
   }
 
+  function getCaretFixedPos(textarea: HTMLTextAreaElement, cursorIndex: number): { top: number; left: number } {
+    const style = window.getComputedStyle(textarea);
+    const div = document.createElement('div');
+    const copyProps = [
+      'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+      'lineHeight', 'letterSpacing', 'wordSpacing',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+      'boxSizing',
+    ];
+    copyProps.forEach((p) => { (div.style as unknown as Record<string, string>)[p] = (style as unknown as Record<string, string>)[p]; });
+    div.style.position = 'absolute';
+    div.style.top = '-9999px';
+    div.style.left = '-9999px';
+    div.style.width = textarea.clientWidth + 'px';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordBreak = 'break-word';
+    div.style.overflow = 'scroll';
+    div.appendChild(document.createTextNode(textarea.value.slice(0, cursorIndex)));
+    const marker = document.createElement('span');
+    marker.textContent = '\u200b';
+    div.appendChild(marker);
+    document.body.appendChild(div);
+    const divRect = div.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    const caretTop = markerRect.top - divRect.top;
+    const caretLeft = markerRect.left - divRect.left;
+    document.body.removeChild(div);
+    const textareaRect = textarea.getBoundingClientRect();
+    const lineH = parseFloat(style.lineHeight) || 20;
+    return {
+      top: textareaRect.top + caretTop - textarea.scrollTop + lineH,
+      left: textareaRect.left + caretLeft - textarea.scrollLeft,
+    };
+  }
+
+  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const val = e.target.value;
+    setContent(val);
+    const cursor = e.target.selectionStart ?? 0;
+    const before = val.slice(0, cursor);
+    const match = before.match(/#([^\s#]*)$/);
+    if (match) {
+      const q = match[1].toLowerCase();
+      const filtered = allTags.filter((t) => t.startsWith(q) && t !== q).slice(0, 6);
+      setTagQuery(match[1]);
+      setTagSuggestions(filtered);
+      setActiveSuggestion(0);
+      if (textareaRef.current) {
+        const hashIndex = cursor - match[1].length - 1;
+        setDropdownPos(getCaretFixedPos(textareaRef.current, hashIndex));
+      }
+    } else {
+      setTagQuery(null);
+      setTagSuggestions([]);
+      setDropdownPos(null);
+    }
+  }
+
+  function applyTag(tag: string) {
+    const textarea = textareaRef.current;
+    if (!textarea || tagQuery === null) return;
+    const cursor = textarea.selectionStart ?? 0;
+    const before = content.slice(0, cursor);
+    const after = content.slice(cursor);
+    const newBefore = before.replace(/#([^\s#]*)$/, `#${tag}`);
+    const newContent = newBefore + after;
+    setContent(newContent);
+    setTagSuggestions([]);
+    setTagQuery(null);
+    setDropdownPos(null);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = newBefore.length;
+    }, 0);
+  }
+
+  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!tagSuggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveSuggestion((i) => Math.min(i + 1, tagSuggestions.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveSuggestion((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Tab" || (e.key === "Enter" && tagSuggestions.length > 0)) {
+      e.preventDefault();
+      applyTag(tagSuggestions[activeSuggestion]);
+    } else if (e.key === "Escape") {
+      setTagSuggestions([]);
+      setTagQuery(null);
+    }
+  }
+
   const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
 
   return (
@@ -396,12 +504,37 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               />
 
               <textarea
+                ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={handleContentChange}
+                onKeyDown={handleTextareaKeyDown}
                 placeholder="오늘의 기록..."
                 rows={8}
                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none ${isDark ? "border-gray-700 bg-[#111] text-white placeholder-gray-600" : "border-gray-200 bg-white text-gray-900 placeholder-gray-400"}`}
               />
+              {tagSuggestions.length > 0 && dropdownPos && (
+                <ul
+                  className={`fixed z-[200] rounded-xl shadow-lg border overflow-hidden min-w-[140px] ${isDark ? "bg-[#2a2a2a] border-gray-700" : "bg-white border-gray-200"}`}
+                  style={{ top: dropdownPos.top, left: dropdownPos.left }}
+                >
+                  {tagSuggestions.map((tag, i) => (
+                    <li key={tag}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); applyTag(tag); }}
+                        onMouseEnter={() => setActiveSuggestion(i)}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-1.5 ${
+                          i === activeSuggestion
+                            ? isDark ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"
+                            : isDark ? "text-gray-300" : "text-gray-700"
+                        }`}
+                      >
+                        <span className={isDark ? "text-gray-500" : "text-gray-400"}>#</span>{tag}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               {error && <p className="text-red-500 text-sm">{error}</p>}
             </form>

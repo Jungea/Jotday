@@ -12,6 +12,12 @@ export async function GET(request: NextRequest) {
   const month = searchParams.get("month"); // YYYY-MM
   const feed = searchParams.get("feed");
 
+  if (searchParams.get("alltags") === "true") {
+    const { data } = await supabase.from("cards").select("tags").eq("user_id", user.id);
+    const allTags = [...new Set((data ?? []).flatMap((c: { tags: string[] }) => c.tags ?? []))].sort();
+    return NextResponse.json(allTags);
+  }
+
   const q = searchParams.get("q");
   const tagsParam = searchParams.get("tags");
 
