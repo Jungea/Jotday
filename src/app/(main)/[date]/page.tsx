@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Link, Check } from "lucide-react";
+import { ArrowLeft, Plus, Link } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
@@ -10,6 +10,7 @@ import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
+import { useToastStore } from "@/store/toast";
 import type { Card } from "@/types";
 
 export default function DayPage({ params }: { params: Promise<{ date: string }> }) {
@@ -19,9 +20,9 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const [showForm, setShowForm] = useState(false);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
-  const [linked, setLinked] = useState(false);
   const theme = useThemeStore((s) => s.theme);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
+  const addToast = useToastStore((s) => s.addToast);
   const daySort = useShareSettingsStore((s) => s.daySort);
 
   const fetchCards = useCallback(async () => {
@@ -50,7 +51,13 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   }
 
   function handleSetRepresentative(id: string) {
-    setCards((prev) => prev.map((c) => ({ ...c, is_representative: c.id === id })));
+    setCards((prev) => {
+      const isCurrentlyRep = prev.find((c) => c.id === id)?.is_representative;
+      if (isCurrentlyRep) {
+        return prev.map((c) => c.id === id ? { ...c, is_representative: false } : c);
+      }
+      return prev.map((c) => ({ ...c, is_representative: c.id === id }));
+    });
   }
 
   function handleEdit(card: Card) {
@@ -74,8 +81,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     const { token } = await res.json();
     const url = `${window.location.origin}/share/${token}`;
     await navigator.clipboard.writeText(url);
-    setLinked(true);
-    setTimeout(() => setLinked(false), 2000);
+    addToast("링크가 복사됐어요");
   }
 
   const parsedDate = parseISO(date);
@@ -116,7 +122,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           onClick={handleShareDate}
           className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
-          {linked ? <Check size={18} /> : <Link size={18} />}
+          <Link size={18} />
         </button>
       </header>
 
