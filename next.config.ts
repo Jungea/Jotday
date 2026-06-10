@@ -7,6 +7,7 @@ try {
 } catch {}
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   env: {
     NEXT_PUBLIC_GIT_HASH: gitHash,
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
