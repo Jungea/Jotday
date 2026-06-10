@@ -8,6 +8,7 @@ import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { CardForm } from "@/components/cards/CardForm";
 import { CameraModal } from "@/components/cards/CameraModal";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
+import { ToastContainer, createToast } from "@/components/ui/Toast";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
 import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
@@ -31,6 +32,7 @@ function HomeContent() {
   const [showQuickCamera, setShowQuickCamera] = useState(false);
   const [quickCropSrc, setQuickCropSrc] = useState<string | null>(null);
   const [quickSaving, setQuickSaving] = useState(false);
+  const [toasts, setToasts] = useState<{ id: number; message: string }[]>([]);
   const today = format(new Date(), "yyyy-MM-dd");
   const { showHeader, onScroll } = useScrollHeader();
   const theme = useThemeStore((s) => s.theme);
@@ -82,6 +84,7 @@ function HomeContent() {
       cardData.append("tags", JSON.stringify([]));
       await fetch("/api/cards", { method: "POST", body: cardData });
       fetchMetas(currentMonth);
+      setToasts((prev) => [...prev, createToast("사진이 저장됐어요")]);
     } finally {
       setQuickSaving(false);
     }
@@ -143,6 +146,8 @@ function HomeContent() {
           onCancel={() => { URL.revokeObjectURL(quickCropSrc); setQuickCropSrc(null); }}
         />
       )}
+
+      <ToastContainer toasts={toasts} onDone={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))} />
 
       {showForm && (
         <CardForm
