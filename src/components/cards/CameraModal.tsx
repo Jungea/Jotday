@@ -28,7 +28,7 @@ export function CameraModal({ onCapture, onCancel }: Props) {
   const [maxZoom, setMaxZoom] = useState(3);
   const [torch, setTorch] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
-  const [grid, setGrid] = useState(false);
+  const [grid, setGrid] = useState(true);
   const [timerMode, setTimerMode] = useState<0 | 3 | 10>(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [captureFlash, setCaptureFlash] = useState(false);
