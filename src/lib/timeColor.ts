@@ -17,18 +17,18 @@ function lerp(a: number, b: number, t: number) {
 
 function hourToColor(hour: number): string {
   const h = Math.max(0, Math.min(24, hour));
-  for (let i = 0; i < STOPS.length - 1; i++) {
-    const [h0, r0, g0, b0] = STOPS[i];
-    const [h1, r1, g1, b1] = STOPS[i + 1];
-    if (h >= h0 && h <= h1) {
-      const t = (h - h0) / (h1 - h0);
-      return `rgb(${lerp(r0, r1, t)},${lerp(g0, g1, t)},${lerp(b0, b1, t)})`;
-    }
-  }
-  return `rgb(30,58,138)`;
+  const i = STOPS.findIndex(([h0], idx) => idx < STOPS.length - 1 && h >= h0 && h <= STOPS[idx + 1][0]);
+  if (i === -1) return `rgb(${STOPS[0][1]},${STOPS[0][2]},${STOPS[0][3]})`;
+  const [h0, r0, g0, b0] = STOPS[i];
+  const [h1, r1, g1, b1] = STOPS[i + 1];
+  const t = (h - h0) / (h1 - h0);
+  return `rgb(${lerp(r0, r1, t)},${lerp(g0, g1, t)},${lerp(b0, b1, t)})`;
 }
 
 /** 카드 시간(시.분)에서 다음 카드 시간까지 흐르는 그라데이션 CSS 값 반환 */
 export function cardBarGradient(fromHour: number, toHour: number): string {
-  return `linear-gradient(180deg, ${hourToColor(fromHour)}, ${hourToColor(toHour)})`;
+  const from = hourToColor(fromHour);
+  const to = hourToColor(toHour);
+  if (from === to) return from;
+  return `linear-gradient(180deg, ${from}, ${to})`;
 }

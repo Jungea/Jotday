@@ -13,6 +13,11 @@ import { useShareSettingsStore } from "@/store/shareSettings";
 import { useToastStore } from "@/store/toast";
 import type { Card } from "@/types";
 
+function toHour(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.getHours() + d.getMinutes() / 60;
+}
+
 export default function DayPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = use(params);
   const router = useRouter();
@@ -42,11 +47,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     fetchCards();
   }, [fetchCards]);
 
-  function handleDelete(id: string) {
-    setCards((prev) => prev.filter((c) => c.id !== id));
-  }
-
-  function handleMove(id: string) {
+  function handleRemoveCard(id: string) {
     setCards((prev) => prev.filter((c) => c.id !== id));
   }
 
@@ -58,10 +59,6 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       }
       return prev.map((c) => ({ ...c, is_representative: c.id === id }));
     });
-  }
-
-  function handleEdit(card: Card) {
-    setEditCard(card);
   }
 
   async function handleCopy(newCardId: string) {
@@ -140,14 +137,12 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
         ) : (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             {cards.map((card, i) => {
-              const toHour = (d: Date) => d.getHours() + d.getMinutes() / 60;
-              const from = toHour(new Date(card.created_at));
+              const from = toHour(card.created_at);
               const next = cards[i + 1];
-              const to = next ? toHour(new Date(next.created_at)) : from + 1;
-              const barGradient = cardBarGradient(from, to);
+              const to = next ? toHour(next.created_at) : from + 1;
               return (
                 <div key={card.id} className="w-full max-w-sm">
-                  <CardItem card={card} isDark={isDark} onDelete={handleDelete} onEdit={handleEdit} onCopy={handleCopy} onMove={handleMove} onSetRepresentative={handleSetRepresentative} barGradient={barGradient} />
+                  <CardItem card={card} isDark={isDark} onDelete={handleRemoveCard} onEdit={setEditCard} onCopy={handleCopy} onMove={handleRemoveCard} onSetRepresentative={handleSetRepresentative} barGradient={cardBarGradient(from, to)} />
                 </div>
               );
             })}

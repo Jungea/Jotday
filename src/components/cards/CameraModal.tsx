@@ -8,6 +8,12 @@ interface Props {
   onCancel: () => void;
 }
 
+interface MediaTrackCapabilitiesExtended extends MediaTrackCapabilities {
+  zoom?: { min: number; max: number; step?: number };
+  torch?: boolean;
+  focusMode?: string[];
+}
+
 export function CameraModal({ onCapture, onCancel }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,8 +25,6 @@ export function CameraModal({ onCapture, onCancel }: Props) {
   const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoomLabelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countdownRemainingRef = useRef(0);
-
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
@@ -50,8 +54,7 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     const track = streamRef.current?.getVideoTracks()[0];
     if (track && hwRange) {
       track.applyConstraints({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        advanced: [{ zoom: Math.max(hwRange.min, Math.min(hwRange.max, clamped)) } as any],
+        advanced: [{ zoom: Math.max(hwRange.min, Math.min(hwRange.max, clamped)) } as MediaTrackConstraintSet],
       }).catch(() => {});
     } else if (videoRef.current) {
       videoRef.current.style.transform = clamped > 1 ? `scale(${clamped})` : "";
@@ -83,8 +86,7 @@ export function CameraModal({ onCapture, onCancel }: Props) {
       streamRef.current = stream;
 
       const track = stream.getVideoTracks()[0];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const caps = track.getCapabilities() as any;
+      const caps = track.getCapabilities() as MediaTrackCapabilitiesExtended;
 
       if (caps?.zoom) {
         hwZoomRef.current = { min: caps.zoom.min, max: caps.zoom.max };
@@ -168,7 +170,7 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     track.applyConstraints({
       advanced: [{
         focusMode: "single-shot",
-        pointsOfInterest: [{ x: px / e.currentTarget.getBoundingClientRect().width, y: py / e.currentTarget.getBoundingClientRect().height }],
+        pointsOfInterest: [{ x: px / rect.width, y: py / rect.height }],
       } as MediaTrackConstraintSet],
     }).then(() => {
       setTimeout(() => {
@@ -240,15 +242,14 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     if (timerMode === 0) {
       doCapture();
     } else {
-      countdownRemainingRef.current = timerMode;
-      setCountdown(timerMode);
+      let remaining = timerMode;
+      setCountdown(remaining);
       countdownIntervalRef.current = setInterval(() => {
-        countdownRemainingRef.current -= 1;
-        setCountdown(countdownRemainingRef.current);
-        if (countdownRemainingRef.current <= 0) {
+        remaining -= 1;
+        setCountdown(remaining);
+        if (remaining <= 0) {
           clearInterval(countdownIntervalRef.current!);
           countdownIntervalRef.current = null;
-          setCountdown(null);
           doCapture();
         }
       }, 1000);

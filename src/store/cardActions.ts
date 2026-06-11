@@ -43,13 +43,12 @@ export const useCardActionsStore = create<CardActionsState>()(
     }),
     {
       name: "card-actions",
-      version: 2,
-      migrate: (state, version) => {
+      version: 3,
+      migrate: (state) => {
         const s = state as CardActionsState;
-        if (version < 2 && !s.order.includes("copy")) {
-          return { ...s, order: [...s.order, "copy"] };
-        }
-        return s;
+        const missing = DEFAULT_ORDER.filter((id) => !s.order.includes(id));
+        if (missing.length === 0) return s;
+        return { ...s, order: [...s.order, ...missing] };
       },
     }
   )

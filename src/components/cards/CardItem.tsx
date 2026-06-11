@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Trash2, Pencil, Star, Download, Link, MoreHorizontal, Copy, Loader2, Check, CalendarDays } from "lucide-react";
 import { format } from "date-fns";
@@ -422,17 +423,22 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
   menuDir: "up" | "down";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [actualDir, setActualDir] = useState<"up" | "down">(menuDir);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
 
   function handleToggleMore() {
     if (!showMore && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setActualDir(window.innerHeight - rect.bottom < 200 ? "up" : "down");
+      const isUp = window.innerHeight - rect.bottom < 200;
+      setMenuPos(
+        isUp
+          ? { bottom: window.innerHeight - rect.top + 4, right: window.innerWidth - rect.right }
+          : { top: rect.bottom + 4, right: window.innerWidth - rect.right }
+      );
     }
     setShowMore((v) => !v);
   }
 
-  const menuClass = `absolute ${actualDir === "up" ? "bottom-8" : "top-8"} right-0 z-50 rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
+  const menuClass = `fixed z-[200] rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
   const itemClass = (active?: boolean) => `w-full flex items-center gap-2.5 px-3 py-2 text-xs ${active ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50")}`;
   const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
 
@@ -472,11 +478,12 @@ function ActionButtons({ size, btnBg, isDark, p, order, showMore, setShowMore, o
           <button onClick={handleToggleMore} disabled={anyLoading} className={`${btnBg} rounded-full p-1.5 shadow ${linked ? (isDark ? "text-white" : "text-gray-900") : isDark ? "text-gray-400" : "text-gray-500"}`}>
             {overflowLoading ? <Loader2 size={size} className="animate-spin" /> : linked ? <Check size={size} /> : <MoreHorizontal size={size} />}
           </button>
-          {showMore && (
+          {showMore && menuPos && createPortal(
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowMore(false)} />
-              <div className={menuClass}>{overflowEls}</div>
-            </>
+              <div className="fixed inset-0 z-[199]" onClick={() => setShowMore(false)} />
+              <div className={menuClass} style={menuPos}>{overflowEls}</div>
+            </>,
+            document.body
           )}
         </div>
       )}
