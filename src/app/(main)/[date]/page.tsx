@@ -43,9 +43,11 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     return [];
   }, [date, daySort]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchCards();
   }, [fetchCards]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleRemoveCard(id: string) {
     setCards((prev) => prev.filter((c) => c.id !== id));

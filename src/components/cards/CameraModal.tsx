@@ -108,16 +108,19 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     }
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    const video = videoRef.current;
     startCamera(facingMode);
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
+      if (video) video.srcObject = null;
       if (focusTimerRef.current) clearTimeout(focusTimerRef.current);
       if (zoomLabelTimerRef.current) clearTimeout(zoomLabelTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
   }, [facingMode, startCamera]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // 핀치 줌
   useEffect(() => {

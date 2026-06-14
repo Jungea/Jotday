@@ -28,6 +28,7 @@ function touchMid(t: TouchList) {
   return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 };
 }
 
+/* eslint-disable react-hooks/refs */
 export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);

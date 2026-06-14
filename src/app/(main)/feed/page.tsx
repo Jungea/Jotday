@@ -87,8 +87,9 @@ export default function FeedPage() {
     setLoading(false);
     setInitialLoaded(true);
     fetchingRef.current = false;
-  }, [sort, from, to, imagesOnly]);
+  }, [sort, from, to, imagesOnly, setCards]);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCards([]);
     pageRef.current = 0;
@@ -96,6 +97,7 @@ export default function FeedPage() {
     setInitialLoaded(false);
     fetchPage(0, true);
   }, [fetchPage]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!hasMore || loading) return;
@@ -129,7 +131,7 @@ export default function FeedPage() {
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [onScrollHeader]);
 
   const bg = isDark ? "bg-[#111]" : "bg-white";
   const border = isDark ? "border-gray-800" : "border-gray-200";

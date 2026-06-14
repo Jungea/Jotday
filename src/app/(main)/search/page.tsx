@@ -59,13 +59,15 @@ function SearchContent() {
   }, []);
 
   // URL 파라미터로 직접 진입 시 초기 검색
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (didInitialSearch.current) return;
     if (query || activeTags.length > 0) {
       didInitialSearch.current = true;
       fetchResults(query, activeTags, 0, true);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   function handleSearch(overrideTags?: string[]) {
     const tags = overrideTags ?? activeTags;

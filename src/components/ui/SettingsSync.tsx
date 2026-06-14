@@ -69,7 +69,6 @@ export function SettingsSync() {
       unsubs.forEach((u) => u());
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return null;

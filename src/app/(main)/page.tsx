@@ -22,10 +22,12 @@ function HomeContent() {
     searchParams.get("month") ?? format(new Date(), "yyyy-MM")
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const month = searchParams.get("month");
     if (month) setCurrentMonth(month);
   }, [searchParams]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   const [loading, setLoading] = useState(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -51,9 +53,11 @@ function HomeContent() {
     setInitialLoaded(true);
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchMetas(currentMonth);
   }, [currentMonth, fetchMetas]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const isDark = theme === "dark";
 

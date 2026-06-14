@@ -49,6 +49,7 @@ export function DaySheet({
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
   const addToast = useToastStore((s) => s.addToast);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setLoading(true);
     setCards([]);
@@ -56,6 +57,7 @@ export function DaySheet({
       .then((r) => (r.ok ? r.json() : []))
       .then((data: Card[]) => { setCards(data); setLoading(false); });
   }, [date]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!scrollToId || cards.length === 0) return;

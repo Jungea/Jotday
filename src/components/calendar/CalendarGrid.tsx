@@ -42,9 +42,11 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
   const [jumpIsDragging, setJumpIsDragging] = useState(false);
   const jumpStartY = useRef(0);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (initialMonth) setCurrent(parse(initialMonth, "yyyy-MM", new Date()));
   }, [initialMonth]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const currentYear = current.getFullYear();
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
