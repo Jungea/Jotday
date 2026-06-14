@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import type { DragEvent } from "react";
-import imageCompression from "browser-image-compression";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
 import { X, Upload, Camera, Scissors } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { ImageCropModal } from "@/components/cards/ImageCropModal";
+import { CameraModal } from "@/components/cards/CameraModal";
+import { useThemeStore } from "@/store/theme";
+import { useTagAutocomplete } from "@/hooks/useTagAutocomplete";
+import { useImageSlots, cloudinaryResized } from "@/hooks/useImageSlots";
+import type { Card } from "@/types";
 
 function extractTags(text: string): string[] {
   const matches = text.match(/#([^\s#]+)/g) ?? [];
   return [...new Set(matches.map((m) => m.slice(1).toLowerCase()))];
 }
-import { Button } from "@/components/ui/Button";
-import { ImageCropModal } from "@/components/cards/ImageCropModal";
-import { CameraModal } from "@/components/cards/CameraModal";
-import { useThemeStore } from "@/store/theme";
-import type { Card } from "@/types";
 
 interface CardFormProps {
   date: string;
@@ -23,211 +23,42 @@ interface CardFormProps {
   onCancel: () => void;
 }
 
-type ImageSlot =
-  | { kind: "existing"; url: string; publicId: string }
-  | { kind: "uploaded"; url: string; publicId: string };
-
-// Cloudinary URL에 리사이즈 파라미터 삽입 (썸네일·크롭 미리보기용)
-function cloudinaryResized(url: string, width: number): string {
-  if (!url.includes("/upload/")) return url;
-  return url.replace("/upload/", `/upload/w_${width},c_limit,q_auto,f_auto/`);
-}
-
-function initSlots(editCard?: Card): ImageSlot[] {
-  if (!editCard) return [];
-  if (editCard.images?.length > 0) {
-    return editCard.images.map((img) => ({ kind: "existing", url: img.url, publicId: img.public_id }));
-  }
-  if (editCard.image_url) {
-    return [{ kind: "existing", url: editCard.image_url, publicId: editCard.image_public_id ?? "" }];
-  }
-  return [];
-}
-
 export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps) {
   const isDark = useThemeStore((s) => s.theme === "dark");
-  const cardType = "mixed";
+  const isEdit = !!editCard;
+
   const [content, setContent] = useState(editCard?.content ?? "");
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
   const [manualTime, setManualTime] = useState(false);
-
-  const [allTags, setAllTags] = useState<string[]>([]);
-  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
-  const [tagQuery, setTagQuery] = useState<string | null>(null);
-  const [activeSuggestion, setActiveSuggestion] = useState(0);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    fetch("/api/cards?alltags=true")
-      .then((r) => r.json())
-      .then((tags) => setAllTags(tags))
-      .catch(() => {});
-  }, []);
-
-  const [cropQueue, setCropQueue] = useState<string[]>([]);
-  const [croppingSlotIndex, setCroppingSlotIndex] = useState<number | null>(null);
-  const [slots, setSlots] = useState<ImageSlot[]>(() => initSlots(editCard));
-
-  // unmount 시 cropQueue의 Blob URL 정리
-  const cropQueueRef = useRef(cropQueue);
-  useEffect(() => { cropQueueRef.current = cropQueue; }, [cropQueue]);
-  useEffect(() => {
-    return () => { cropQueueRef.current.forEach(URL.revokeObjectURL); };
-  }, []);
-
-  const [showCamera, setShowCamera] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const isEdit = !!editCard;
-  const dragIndex = useRef<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { tagSuggestions, activeSuggestion, setActiveSuggestion, dropdownPos, handleContentChange, handleKeyDown, applyTag } =
+    useTagAutocomplete(textareaRef, content, setContent);
+
+  const {
+    slots, cropQueue, croppingSlotIndex, showCamera, setShowCamera,
+    uploading, dragOver, uploadError, setUploadError,
+    handleFileChange, handleCameraCapture, handleCropConfirm, handleCropCancel,
+    handleCropSlot, handleRemoveSlot, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
+  } = useImageSlots(editCard);
+
   const busy = uploading || loading;
-
-  async function uploadToCloudinary(file: File): Promise<{ url: string; publicId: string }> {
-    const signRes = await fetch("/api/upload-sign");
-    if (!signRes.ok) throw new Error("서명 실패");
-    const { signature, timestamp, folder, cloudName, apiKey } = await signRes.json();
-
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("signature", signature);
-    fd.append("timestamp", String(timestamp));
-    fd.append("folder", folder);
-    fd.append("api_key", apiKey);
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: "POST",
-      body: fd,
-    });
-    if (!res.ok) throw new Error("업로드 실패");
-    const data = await res.json();
-    return { url: data.secure_url, publicId: data.public_id };
-  }
-
-  // 갤러리 전용: 압축 후 크롭 모달에 추가
-  async function compressForCrop(file: File): Promise<string> {
-    if (typeof createImageBitmap !== "undefined" && typeof OffscreenCanvas !== "undefined") {
-      try {
-        const MAX = 1200;
-        const bitmap = await createImageBitmap(file, { resizeWidth: MAX, resizeQuality: "medium" });
-        const { width, height } = bitmap;
-        const canvas = new OffscreenCanvas(width, height);
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(bitmap, 0, 0);
-        bitmap.close();
-        const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.82 });
-        return URL.createObjectURL(blob);
-      } catch {
-        // fallback
-      }
-    }
-    const compressed = await imageCompression(file, {
-      maxWidthOrHeight: 1200,
-      maxSizeMB: 1,
-      useWebWorker: true,
-      fileType: "image/jpeg",
-      initialQuality: 0.82,
-    });
-    return URL.createObjectURL(compressed);
-  }
-
-  // 갤러리 버튼: 압축 → 크롭 모달 (크롭 확인 후 Cloudinary 업로드)
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (!files.length) return;
-    setUploading(true);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      (files as (File | null)[])[i] = null;
-      try {
-        const url = await compressForCrop(file);
-        setCropQueue((q) => [...q, url]);
-      } catch {
-        // 건너뜀
-      }
-    }
-    setUploading(false);
-  }
-
-  // 카메라 캡처: 크롭 모달로 전달 (비디오 프레임은 ~8MB로 OOM 없음)
-  function handleCameraCapture(file: File) {
-    setShowCamera(false);
-    const url = URL.createObjectURL(file);
-    setCropQueue((q) => [...q, url]);
-  }
-
-  // 크롭 확인: 모달을 먼저 닫고 Cloudinary 업로드
-  async function handleCropConfirm(file: File) {
-    const idx = croppingSlotIndex;
-    setCroppingSlotIndex(null);
-    setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); });
-    setUploading(true);
-    try {
-      const { url, publicId } = await uploadToCloudinary(file);
-      const newSlot: ImageSlot = { kind: "uploaded", url, publicId };
-      if (idx !== null) {
-        setSlots((prev) => prev.map((s, i) => i === idx ? newSlot : s));
-      } else {
-        setSlots((prev) => [...prev, newSlot]);
-      }
-    } catch {
-      setError("업로드 실패");
-    }
-    setUploading(false);
-  }
-
-  // 기존 슬롯 크롭 (Cloudinary URL → 1600px로 크롭 모달)
-  function handleCropSlot(index: number) {
-    setCroppingSlotIndex(index);
-    setCropQueue((q) => [...q, cloudinaryResized(slots[index].url, 1600)]);
-  }
-
-  function handleDragStart(e: DragEvent, index: number) {
-    dragIndex.current = index;
-    e.dataTransfer.effectAllowed = "move";
-  }
-
-  function handleDragOver(e: DragEvent, index: number) {
-    e.preventDefault();
-    setDragOver(index);
-  }
-
-  function handleDrop(e: DragEvent, index: number) {
-    e.preventDefault();
-    const from = dragIndex.current;
-    if (from === null || from === index) { setDragOver(null); return; }
-    setSlots((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(from, 1);
-      next.splice(index, 0, item);
-      return next;
-    });
-    dragIndex.current = null;
-    setDragOver(null);
-  }
-
-  function handleDragEnd() {
-    dragIndex.current = null;
-    setDragOver(null);
-  }
-
-  function handleRemoveSlot(index: number) {
-    setSlots((prev) => prev.filter((_, i) => i !== index));
-  }
+  const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
+  const displayError = error ?? uploadError;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setUploadError(null);
     setLoading(true);
 
     if (isEdit) {
       const formData = new FormData();
       formData.append("id", editCard.id);
-      formData.append("type", cardType);
+      formData.append("type", "mixed");
       if (content) formData.append("content", content);
       if (time) formData.append("time", new Date(`${date}T${time}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
@@ -251,17 +82,17 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         setLoading(false);
         return;
       }
-      onSuccess();
     } else {
       const formData = new FormData();
       formData.append("date", date);
-      formData.append("type", cardType);
+      formData.append("type", "mixed");
       if (content) formData.append("content", content);
       formData.append("time", new Date(`${date}T${manualTime ? time : format(new Date(), "HH:mm")}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
       formData.append("images", JSON.stringify(
         slots.map((s) => ({ url: s.url, public_id: s.publicId }))
       ));
+
       const res = await fetch("/api/cards", { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json();
@@ -269,114 +100,16 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         setLoading(false);
         return;
       }
-      onSuccess();
     }
+
     setLoading(false);
+    onSuccess();
   }
-
-  function getCaretFixedPos(textarea: HTMLTextAreaElement, cursorIndex: number): { top: number; left: number } {
-    const style = window.getComputedStyle(textarea);
-    const div = document.createElement('div');
-    const copyProps = [
-      'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
-      'lineHeight', 'letterSpacing', 'wordSpacing',
-      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
-      'boxSizing',
-    ];
-    copyProps.forEach((p) => { (div.style as unknown as Record<string, string>)[p] = (style as unknown as Record<string, string>)[p]; });
-    div.style.position = 'absolute';
-    div.style.top = '-9999px';
-    div.style.left = '-9999px';
-    div.style.width = textarea.clientWidth + 'px';
-    div.style.whiteSpace = 'pre-wrap';
-    div.style.wordBreak = 'break-word';
-    div.style.overflow = 'scroll';
-    div.appendChild(document.createTextNode(textarea.value.slice(0, cursorIndex)));
-    const marker = document.createElement('span');
-    marker.textContent = '\u200b';
-    div.appendChild(marker);
-    document.body.appendChild(div);
-    const divRect = div.getBoundingClientRect();
-    const markerRect = marker.getBoundingClientRect();
-    const caretTop = markerRect.top - divRect.top;
-    const caretLeft = markerRect.left - divRect.left;
-    document.body.removeChild(div);
-    const textareaRect = textarea.getBoundingClientRect();
-    const lineH = parseFloat(style.lineHeight) || 20;
-    return {
-      top: textareaRect.top + caretTop - textarea.scrollTop + lineH,
-      left: textareaRect.left + caretLeft - textarea.scrollLeft,
-    };
-  }
-
-  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value;
-    setContent(val);
-    const cursor = e.target.selectionStart ?? 0;
-    const before = val.slice(0, cursor);
-    const match = before.match(/#([^\s#]*)$/);
-    if (match) {
-      const q = match[1].toLowerCase();
-      const filtered = allTags.filter((t) => t.startsWith(q) && t !== q).slice(0, 6);
-      setTagQuery(match[1]);
-      setTagSuggestions(filtered);
-      setActiveSuggestion(0);
-      if (textareaRef.current) {
-        const hashIndex = cursor - match[1].length - 1;
-        setDropdownPos(getCaretFixedPos(textareaRef.current, hashIndex));
-      }
-    } else {
-      setTagQuery(null);
-      setTagSuggestions([]);
-      setDropdownPos(null);
-    }
-  }
-
-  function applyTag(tag: string) {
-    const textarea = textareaRef.current;
-    if (!textarea || tagQuery === null) return;
-    const cursor = textarea.selectionStart ?? 0;
-    const before = content.slice(0, cursor);
-    const after = content.slice(cursor);
-    const newBefore = before.replace(/#([^\s#]*)$/, `#${tag}`);
-    const newContent = newBefore + after;
-    setContent(newContent);
-    setTagSuggestions([]);
-    setTagQuery(null);
-    setDropdownPos(null);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.selectionStart = textarea.selectionEnd = newBefore.length;
-    }, 0);
-  }
-
-  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (!tagSuggestions.length) return;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveSuggestion((i) => Math.min(i + 1, tagSuggestions.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveSuggestion((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Tab" || (e.key === "Enter" && tagSuggestions.length > 0)) {
-      e.preventDefault();
-      applyTag(tagSuggestions[activeSuggestion]);
-    } else if (e.key === "Escape") {
-      setTagSuggestions([]);
-      setTagQuery(null);
-    }
-  }
-
-  const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
 
   return (
     <>
       {showCamera && (
-        <CameraModal
-          onCapture={handleCameraCapture}
-          onCancel={() => setShowCamera(false)}
-        />
+        <CameraModal onCapture={handleCameraCapture} onCancel={() => setShowCamera(false)} />
       )}
       {cropQueue[0] && (
         <ImageCropModal
@@ -385,15 +118,11 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           current={croppingSlotIndex !== null ? undefined : slots.length + 1}
           total={croppingSlotIndex !== null ? undefined : slots.length + cropQueue.length}
           onConfirm={handleCropConfirm}
-          onCancel={() => {
-            setCroppingSlotIndex(null);
-            setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); });
-          }}
+          onCancel={handleCropCancel}
         />
       )}
       <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
         <div className={`${isDark ? "bg-[#1c1c1c]" : "bg-white"} rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md max-h-[85dvh] flex flex-col`}>
-          {/* 고정 헤더 */}
           <div className={`flex items-center justify-between px-5 pt-5 pb-3 border-b ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
             <h2 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>{isEdit ? "카드 수정" : `${date} 기록`}</h2>
             <button onClick={onCancel} className={isDark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}>
@@ -401,7 +130,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
             </button>
           </div>
 
-          {/* 스크롤 영역 */}
           <div className="overflow-y-auto flex-1 px-5 py-4">
             <form id="card-form" onSubmit={handleSubmit} className="space-y-4">
               {isEdit ? (
@@ -438,7 +166,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 </div>
               )}
 
-              {/* 이미지 슬롯 목록 — 드래그로 순서 변경 */}
               {slots.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {slots.map((slot, i) => (
@@ -474,7 +201,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 </div>
               )}
 
-              {/* 이미지 추가 버튼 */}
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -494,20 +220,13 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                   <Camera size={16} />
                 </button>
               </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-              />
+              <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
 
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={handleContentChange}
-                onKeyDown={handleTextareaKeyDown}
+                onKeyDown={handleKeyDown}
                 placeholder="오늘의 기록..."
                 rows={8}
                 className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none ${isDark ? "border-gray-700 bg-[#111] text-white placeholder-gray-600" : "border-gray-200 bg-white text-gray-900 placeholder-gray-400"}`}
@@ -536,11 +255,10 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 </ul>
               )}
 
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {displayError && <p className="text-red-500 text-sm">{displayError}</p>}
             </form>
           </div>
 
-          {/* 고정 하단 버튼 */}
           <div className={`flex gap-3 px-5 py-4 border-t ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
             <Button
               type="button"
@@ -550,12 +268,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
             >
               취소
             </Button>
-            <Button
-              type="submit"
-              form="card-form"
-              className="flex-1"
-              disabled={busy}
-            >
+            <Button type="submit" form="card-form" className="flex-1" disabled={busy}>
               {loading
                 ? (isEdit ? "수정 중..." : "저장 중...")
                 : uploading
