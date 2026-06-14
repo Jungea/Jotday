@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Eye, EyeOff, GripVertical, Link, LogOut } from "lucide-react";
 import { useCardActionsStore, ACTION_LABELS } from "@/store/cardActions";

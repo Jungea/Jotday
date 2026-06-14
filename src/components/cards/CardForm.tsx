@@ -139,7 +139,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                     type="time"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (_) {} }}
+                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
                     className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
                   />
                 </div>
@@ -159,7 +159,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       type="time"
                       value={time}
                       onChange={(e) => setTime(e.target.value)}
-                      onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (_) {} }}
+                      onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
                       className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
                     />
                   )}

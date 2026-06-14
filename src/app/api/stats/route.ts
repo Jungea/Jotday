@@ -18,23 +18,6 @@ export async function GET() {
     supabase.from("cards").select("tags").eq("user_id", user.id).gte("date", thirtyDaysAgo),
   ]);
 
-  // 스트릭 계산
-  const dateSet = new Set(cardDates?.map((r) => r.date) ?? []);
-  const todayStr = format(today, "yyyy-MM-dd");
-  const yesterdayStr = format(subDays(today, 1), "yyyy-MM-dd");
-
-  let streak = 0;
-  let checkDate: Date | null = dateSet.has(todayStr)
-    ? today
-    : dateSet.has(yesterdayStr)
-    ? subDays(today, 1)
-    : null;
-
-  while (checkDate && dateSet.has(format(checkDate, "yyyy-MM-dd"))) {
-    streak++;
-    checkDate = subDays(checkDate, 1);
-  }
-
   // 최근 6개월 카드 수
   const monthly: Record<string, number> = {};
   for (let i = 5; i >= 0; i--) {

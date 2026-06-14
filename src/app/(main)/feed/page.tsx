@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp, CalendarDays } from "lucide-react";
-import { format, subDays, subMonths, subYears, parseISO } from "date-fns";
+import { format, subDays, subMonths, subYears } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { cardBarGradient } from "@/lib/timeColor";
@@ -49,7 +49,7 @@ export default function FeedPage() {
   const [imagesOnly, setImagesOnly] = useState(false);
 
   const [cards, setCards] = useState<Card[]>([]);
-  const [page, setPage] = useState(0);
+  const pageRef = useRef(0);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
@@ -91,7 +91,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     setCards([]);
-    setPage(0);
+    pageRef.current = 0;
     setHasMore(true);
     setInitialLoaded(false);
     fetchPage(0, true);
@@ -102,11 +102,8 @@ export default function FeedPage() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setPage((p) => {
-            const next = p + 1;
-            fetchPage(next);
-            return next;
-          });
+          pageRef.current += 1;
+          fetchPage(pageRef.current);
         }
       },
       { threshold: 0.1 }

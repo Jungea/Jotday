@@ -220,7 +220,6 @@ export default function StatsPage() {
             {/* 기록 시간대 */}
             {(() => {
               const periods = periodMode === "all" ? stats.periodCounts : stats.recentPeriodCounts;
-              const maxP = Math.max(...periods.map((p) => p.count), 1);
               const total = periods.reduce((s, p) => s + p.count, 0);
               return (
                 <div className={`rounded-2xl p-4 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
