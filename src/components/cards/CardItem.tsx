@@ -196,7 +196,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   const [linked, setLinked] = useState(false);
   const [copying, setCopying] = useState(false);
   const [starring, setStarring] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting] = useState(false);
   const [moving, setMoving] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveTargetDate, setMoveTargetDate] = useState(card.date);
@@ -308,13 +308,9 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
 
   async function handleDeleteConfirm() {
     setShowDeleteConfirm(false);
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/cards?id=${card.id}`, { method: "DELETE" });
-      if (res.ok) onDelete?.(card.id);
-    } finally {
-      setDeleting(false);
-    }
+    onDelete?.(card.id);
+    const res = await fetch(`/api/cards?id=${card.id}`, { method: "DELETE" });
+    addToast(res.ok ? "카드가 삭제됐어요" : "삭제에 실패했어요");
   }
 
   const actionState: ActionState = { sharing, copying, starring, deleting, moving, linked, isRep };
