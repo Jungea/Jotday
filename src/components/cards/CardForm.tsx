@@ -43,6 +43,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     uploading, dragOver, uploadError, setUploadError,
     handleFileChange, handleCameraCapture, handleCropConfirm, handleCropCancel,
     handleCropSlot, handleRemoveSlot, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
+    handleTouchStart, handleTouchMove, handleTouchEnd,
   } = useImageSlots(editCard);
 
   const busy = uploading || loading;
@@ -171,11 +172,15 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                   {slots.map((slot, i) => (
                     <div
                       key={i}
+                      data-slot-index={i}
                       draggable
                       onDragStart={(e) => handleDragStart(e, i)}
                       onDragOver={(e) => handleDragOver(e, i)}
                       onDrop={(e) => handleDrop(e, i)}
                       onDragEnd={handleDragEnd}
+                      onTouchStart={(e) => handleTouchStart(i, e)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
                       className={`relative rounded-lg overflow-hidden w-24 h-[120px] cursor-grab active:cursor-grabbing transition-opacity ${
                         dragOver === i ? "ring-2 ring-amber-400 opacity-70" : ""
                       }`}

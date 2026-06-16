@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { DragEvent } from "react";
+import type { DragEvent, TouchEvent } from "react";
 import imageCompression from "browser-image-compression";
 import type { Card } from "@/types";
 
@@ -81,6 +81,10 @@ export function useImageSlots(editCard?: Card) {
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const dragIndex = useRef<number | null>(null);
+  const touchDragIndex = useRef<number | null>(null);
+  const touchDragOverIndex = useRef<number | null>(null);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  const isTouchDragging = useRef(false);
 
   const cropQueueRef = useRef(cropQueue);
   useEffect(() => { cropQueueRef.current = cropQueue; }, [cropQueue]);
@@ -174,6 +178,57 @@ export function useImageSlots(editCard?: Card) {
     setDragOver(null);
   }
 
+  function handleTouchStart(index: number, e: TouchEvent) {
+    const touch = e.touches[0];
+    touchDragIndex.current = index;
+    touchDragOverIndex.current = index;
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+    isTouchDragging.current = false;
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (touchDragIndex.current === null || !touchStartPos.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPos.current.x;
+    const dy = touch.clientY - touchStartPos.current.y;
+    if (!isTouchDragging.current && Math.sqrt(dx * dx + dy * dy) < 8) return;
+    e.preventDefault();
+    isTouchDragging.current = true;
+
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    let current: Element | null = el;
+    while (current) {
+      const idx = current.getAttribute("data-slot-index");
+      if (idx !== null) {
+        const over = parseInt(idx, 10);
+        touchDragOverIndex.current = over;
+        setDragOver(over);
+        return;
+      }
+      current = current.parentElement;
+    }
+  }
+
+  function handleTouchEnd() {
+    if (isTouchDragging.current) {
+      const from = touchDragIndex.current;
+      const to = touchDragOverIndex.current;
+      if (from !== null && to !== null && from !== to) {
+        setSlots((prev) => {
+          const next = [...prev];
+          const [item] = next.splice(from, 1);
+          next.splice(to, 0, item);
+          return next;
+        });
+      }
+    }
+    touchDragIndex.current = null;
+    touchDragOverIndex.current = null;
+    touchStartPos.current = null;
+    isTouchDragging.current = false;
+    setDragOver(null);
+  }
+
   return {
     slots,
     cropQueue,
@@ -194,5 +249,8 @@ export function useImageSlots(editCard?: Card) {
     handleDragOver,
     handleDrop,
     handleDragEnd,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
   };
 }
