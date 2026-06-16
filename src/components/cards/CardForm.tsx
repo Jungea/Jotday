@@ -193,13 +193,15 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       >
                         <X size={12} />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleCropSlot(i)}
-                        className="absolute bottom-1 right-1 bg-black/50 text-white rounded-full p-0.5"
-                      >
-                        <Scissors size={12} />
-                      </button>
+                      {!isEdit && (
+                        <button
+                          type="button"
+                          onClick={() => handleCropSlot(i)}
+                          className="absolute bottom-1 right-1 bg-black/50 text-white rounded-full p-0.5"
+                        >
+                          <Scissors size={12} />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
