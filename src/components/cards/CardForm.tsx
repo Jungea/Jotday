@@ -43,7 +43,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     uploading, dragOver, uploadError, setUploadError,
     handleFileChange, handleCameraCapture, handleCropConfirm, handleCropCancel,
     handleCropSlot, handleRemoveSlot, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
-    handleTouchStart, handleTouchMove, handleTouchEnd,
+    handleTouchStart, handleTouchEnd, slotContainerRef,
   } = useImageSlots(editCard);
 
   const busy = uploading || loading;
@@ -168,7 +168,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               )}
 
               {slots.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div ref={slotContainerRef} className="flex flex-wrap gap-2">
                   {slots.map((slot, i) => (
                     <div
                       key={i}
@@ -179,7 +179,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       onDrop={(e) => handleDrop(e, i)}
                       onDragEnd={handleDragEnd}
                       onTouchStart={(e) => handleTouchStart(i, e)}
-                      onTouchMove={handleTouchMove}
                       onTouchEnd={handleTouchEnd}
                       className={`relative rounded-lg overflow-hidden w-24 h-[120px] cursor-grab active:cursor-grabbing transition-opacity ${
                         dragOver === i ? "ring-2 ring-amber-400 opacity-70" : ""
