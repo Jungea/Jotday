@@ -368,15 +368,11 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
               )}
               <div className="flex items-center justify-between mt-2">
                 <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>{timeLabel}</p>
-                <div className="flex gap-1 sm:hidden items-center">
+                <div className="flex gap-1 items-center">
                   <ActionButtons size={13} {...sharedActionProps} />
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex gap-1">
-            <ActionButtons size={14} {...sharedActionProps} />
           </div>
         </div>
       </div>
