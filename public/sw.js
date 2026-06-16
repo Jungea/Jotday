@@ -1,8 +1,16 @@
 const STATIC_CACHE = "jotday-static-v1";
+const PAGE_CACHE = "jotday-pages-v1";
 
-// 설치: 즉시 활성화
-self.addEventListener("install", () => {
-  self.skipWaiting();
+// 설치: 메인 페이지 미리 캐시 + 즉시 활성화
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    Promise.all([
+      caches.open(PAGE_CACHE).then((cache) =>
+        fetch("/").then((res) => { if (res.ok) cache.put("/", res); }).catch(() => {})
+      ),
+      self.skipWaiting(),
+    ])
+  );
 });
 
 // 활성화: 이전 캐시 정리
@@ -11,7 +19,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith("jotday-") && k !== STATIC_CACHE)
+          .filter((k) => k.startsWith("jotday-") && k !== STATIC_CACHE && k !== PAGE_CACHE)
           .map((k) => caches.delete(k))
       )
     )
@@ -55,5 +63,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 그 외(페이지·API): 항상 네트워크 우선
+  // 페이지 HTML: stale-while-revalidate (캐시 즉시 응답 후 백그라운드 갱신)
+  if (request.mode === "navigate") {
+    event.respondWith(
+      caches.open(PAGE_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const networkFetch = fetch(request)
+          .then((res) => {
+            if (res.ok) cache.put(request, res.clone());
+            return res;
+          })
+          .catch(() => cached);
+        return cached ?? networkFetch;
+      })
+    );
+    return;
+  }
+
+  // 그 외(API): 항상 네트워크 우선
 });
