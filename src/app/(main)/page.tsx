@@ -33,7 +33,6 @@ function HomeContent() {
   const [showForm, setShowForm] = useState(false);
   const [showQuickCamera, setShowQuickCamera] = useState(false);
   const [quickCropSrc, setQuickCropSrc] = useState<string | null>(null);
-  const [quickSaving, setQuickSaving] = useState(false);
   const today = format(new Date(), "yyyy-MM-dd");
   const { showHeader, onScroll } = useScrollHeader();
   const theme = useThemeStore((s) => s.theme);
@@ -66,32 +65,33 @@ function HomeContent() {
     setQuickCropSrc(URL.createObjectURL(file));
   }
 
-  async function handleQuickCropConfirm(file: File) {
+  function handleQuickCropConfirm(file: File) {
     if (quickCropSrc) URL.revokeObjectURL(quickCropSrc);
     setQuickCropSrc(null);
-    setQuickSaving(true);
-    try {
-      const signRes = await fetch("/api/upload-sign");
-      const { signature, timestamp, folder, cloudName, apiKey } = await signRes.json();
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("signature", signature);
-      fd.append("timestamp", String(timestamp));
-      fd.append("folder", folder);
-      fd.append("api_key", apiKey);
-      const upRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd });
-      const { secure_url, public_id } = await upRes.json();
-      const cardData = new FormData();
-      cardData.append("date", today);
-      cardData.append("type", "image");
-      cardData.append("images", JSON.stringify([{ url: secure_url, public_id }]));
-      cardData.append("tags", JSON.stringify([]));
-      await fetch("/api/cards", { method: "POST", body: cardData });
-      fetchMetas(currentMonth);
-      addToast("사진이 저장됐어요");
-    } finally {
-      setQuickSaving(false);
-    }
+    (async () => {
+      try {
+        const signRes = await fetch("/api/upload-sign");
+        const { signature, timestamp, folder, cloudName, apiKey } = await signRes.json();
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("signature", signature);
+        fd.append("timestamp", String(timestamp));
+        fd.append("folder", folder);
+        fd.append("api_key", apiKey);
+        const upRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd });
+        const { secure_url, public_id } = await upRes.json();
+        const cardData = new FormData();
+        cardData.append("date", today);
+        cardData.append("type", "image");
+        cardData.append("images", JSON.stringify([{ url: secure_url, public_id }]));
+        cardData.append("tags", JSON.stringify([]));
+        await fetch("/api/cards", { method: "POST", body: cardData });
+        fetchMetas(currentMonth);
+        addToast("사진이 저장됐어요");
+      } catch {
+        addToast("사진 저장에 실패했어요");
+      }
+    })();
   }
 
   return (
@@ -122,14 +122,10 @@ function HomeContent() {
       <div className="fixed bottom-20 right-5 z-30 flex flex-col items-center gap-2">
         <button
           onClick={() => setShowQuickCamera(true)}
-          disabled={quickSaving}
           className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
-            ${isDark ? "bg-gray-800 text-gray-200 hover:bg-gray-700" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"}
-            ${quickSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+            ${isDark ? "bg-gray-800 text-gray-200 hover:bg-gray-700" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"}`}
         >
-          {quickSaving
-            ? <div className={`w-4 h-4 border-2 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-400" : "border-gray-500"}`} />
-            : <Camera size={20} />}
+          <Camera size={20} />
         </button>
         <button
           onClick={() => setShowForm(true)}
