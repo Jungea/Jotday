@@ -178,7 +178,9 @@ export function useImageSlots(editCard?: Card) {
 
   function handleCropSlot(index: number) {
     setCroppingSlotIndex(index);
-    setCropQueue((q) => [...q, cloudinaryResized(slots[index].url, 1600)]);
+    const slot = slots[index];
+    if (slot.kind === "pending") return;
+    setCropQueue((q) => [...q, cloudinaryResized(slot.url, 1600)]);
   }
 
   function handleRemoveSlot(index: number) {
