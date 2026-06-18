@@ -37,6 +37,36 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
   );
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [showJump, setShowJump] = useState(false);
+  const historyPushed = useRef(false);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (historyPushed.current) {
+        historyPushed.current = false;
+        setSelectedDay(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  function openSheet(key: string) {
+    if (!historyPushed.current) {
+      history.pushState({ daySheet: true }, "");
+      historyPushed.current = true;
+    } else {
+      history.replaceState({ daySheet: true }, "");
+    }
+    setSelectedDay(key);
+  }
+
+  function closeSheet() {
+    setSelectedDay(null);
+    if (historyPushed.current) {
+      historyPushed.current = false;
+      history.back();
+    }
+  }
   const gridRef = useRef<HTMLDivElement>(null);
   const [jumpDragY, setJumpDragY] = useState(0);
   const [jumpIsDragging, setJumpIsDragging] = useState(false);
@@ -97,7 +127,11 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
     if (!isSameMonth(date, current)) return;
     if (window.innerWidth < 640) {
       const key = format(date, "yyyy-MM-dd");
-      setSelectedDay((prev) => (prev === key ? null : key));
+      if (selectedDay === key) {
+        closeSheet();
+      } else {
+        openSheet(key);
+      }
     } else {
       router.push(`/${format(date, "yyyy-MM-dd")}`);
     }
@@ -276,7 +310,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
           <DaySheet
             date={selectedDay}
             isDark={isDark}
-            onClose={() => setSelectedDay(null)}
+            onClose={closeSheet}
             onDataChange={onDataChange}
             collapsedHeight="40dvh"
             showBackdrop={false}
