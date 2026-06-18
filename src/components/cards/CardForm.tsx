@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { X, Upload, Camera, Scissors } from "lucide-react";
+import { X, Upload, Camera } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { CameraModal } from "@/components/cards/CameraModal";
@@ -43,7 +43,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     slots, cropQueue, croppingSlotIndex, showCamera, setShowCamera,
     uploading, dragOver, uploadError, setUploadError,
     handleFileChange, handleCameraCapture, handleCropConfirm, handleCropCancel,
-    handleCropSlot, handleRemoveSlot, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
+    handleRemoveSlot, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
     handleTouchStart, handleTouchEnd, slotContainerRef,
   } = useImageSlots(editCard);
 
@@ -205,15 +205,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       >
                         <X size={12} />
                       </button>
-                      {!isEdit && slot.kind !== "pending" && (
-                        <button
-                          type="button"
-                          onClick={() => handleCropSlot(i)}
-                          className="absolute bottom-1 right-1 bg-black/50 text-white rounded-full p-0.5"
-                        >
-                          <Scissors size={12} />
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
