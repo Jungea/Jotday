@@ -222,18 +222,18 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={loading}
                   onClick={() => fileRef.current?.click()}
-                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${loading ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Upload size={16} />
-                  <span className="text-sm">{uploading ? "처리 중..." : slots.length > 0 ? "이미지 추가" : "업로드"}</span>
+                  <span className="text-sm">{slots.length > 0 ? "이미지 추가" : "업로드"}</span>
                 </button>
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={loading}
                   onClick={() => setShowCamera(true)}
-                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${loading ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Camera size={16} />
                 </button>

@@ -78,7 +78,8 @@ export function useImageSlots(editCard?: Card) {
   const [cropQueue, setCropQueue] = useState<string[]>([]);
   const [croppingSlotIndex, setCroppingSlotIndex] = useState<number | null>(null);
   const [showCamera, setShowCamera] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const uploading = uploadCount > 0;
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const dragIndex = useRef<number | null>(null);
@@ -126,7 +127,7 @@ export function useImageSlots(editCard?: Card) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (!files.length) return;
-    setUploading(true);
+    setUploadCount((c) => c + 1);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       (files as (File | null)[])[i] = null;
@@ -137,7 +138,7 @@ export function useImageSlots(editCard?: Card) {
         // 건너뜀
       }
     }
-    setUploading(false);
+    setUploadCount((c) => c - 1);
   }
 
   function handleCameraCapture(file: File) {
@@ -158,7 +159,7 @@ export function useImageSlots(editCard?: Card) {
       setSlots((prev) => [...prev, { kind: "pending" as const, tempId }]);
     }
 
-    setUploading(true);
+    setUploadCount((c) => c + 1);
     try {
       const { url, publicId } = await uploadToCloudinary(file);
       const newSlot: ImageSlot = { kind: "uploaded", url, publicId };
@@ -167,7 +168,7 @@ export function useImageSlots(editCard?: Card) {
       setUploadError("업로드 실패");
       setSlots((prev) => prev.filter((s) => !(s.kind === "pending" && s.tempId === tempId)));
     }
-    setUploading(false);
+    setUploadCount((c) => c - 1);
   }
 
   function handleCropCancel() {
