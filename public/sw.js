@@ -73,7 +73,7 @@ self.addEventListener("fetch", (event) => {
             if (res.ok) cache.put(request, res.clone());
             return res;
           })
-          .catch(() => cached);
+          .catch(() => cached ?? new Response("오프라인 상태입니다", { status: 503 }));
         return cached ?? networkFetch;
       })
     );
