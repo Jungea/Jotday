@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
     expires_at,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[POST /api/share]", error);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+  }
 
   return NextResponse.json({ token, expires_at });
 }
@@ -71,7 +74,10 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[GET /api/share]", error);
+      return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+    }
     return NextResponse.json(data ?? []);
   }
 
@@ -131,6 +137,9 @@ export async function DELETE(request: NextRequest) {
     .eq("id", id)
     .eq("user_id", user.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[DELETE /api/share]", error);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

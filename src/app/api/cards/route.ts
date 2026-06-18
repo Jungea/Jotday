@@ -86,7 +86,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ error: "Missing query param" }, { status: 400 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    console.error("[GET /api/cards]", e);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }
 
@@ -120,7 +121,8 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(data, { status: 201 });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    console.error("[POST /api/cards]", e);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }
 
@@ -162,7 +164,8 @@ export async function PATCH(request: NextRequest) {
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(data);
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    console.error("[PATCH /api/cards]", e);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }
 
@@ -178,6 +181,7 @@ export async function DELETE(request: NextRequest) {
     await deleteCard(supabase, user.id, id);
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    console.error("[DELETE /api/cards]", e);
+    return NextResponse.json({ error: "서버 오류가 발생했습니다" }, { status: 500 });
   }
 }
