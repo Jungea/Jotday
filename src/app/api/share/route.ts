@@ -26,8 +26,13 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await request.json();
-  const { card_id, date, expires_in_days } = body;
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "잘못된 요청입니다" }, { status: 400 });
+  }
+  const { card_id, date, expires_in_days } = body as { card_id?: string; date?: string; expires_in_days?: number | null };
 
   const token = crypto.randomUUID().replace(/-/g, "");
   const expires_at = expires_in_days != null
