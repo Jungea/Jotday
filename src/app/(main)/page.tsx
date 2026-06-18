@@ -10,7 +10,6 @@ import { CameraModal } from "@/components/cards/CameraModal";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { useToastStore } from "@/store/toast";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
-import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import type { DayMeta } from "@/types";
@@ -99,7 +98,7 @@ function HomeContent() {
       <CollapsingHeader show={showHeader} />
 
       {/* Calendar */}
-      <main className="flex-1 overflow-y-auto px-4 py-6 relative" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
+      <main className="flex-1 overflow-y-auto px-4 py-6 pb-20 relative" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
         {!initialLoaded ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
@@ -116,10 +115,8 @@ function HomeContent() {
         )}
       </main>
 
-      <BottomTabBar />
-
       {/* FAB */}
-      <div className="fixed bottom-20 right-5 z-30 flex flex-col items-center gap-2">
+      <div className="fixed bottom-20 right-5 z-50 flex flex-col items-center gap-2">
         <button
           onClick={() => setShowQuickCamera(true)}
           className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors

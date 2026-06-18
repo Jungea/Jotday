@@ -7,7 +7,6 @@ import { format, parseISO } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { cardBarGradient } from "@/lib/timeColor";
-import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { DaySheet } from "@/components/ui/DaySheet";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
@@ -154,7 +153,7 @@ function SearchContent() {
       </div>
 
       {/* 결과 */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-16">
         {!searched && !loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
             <Search size={32} className={isDark ? "text-gray-700" : "text-gray-300"} />
@@ -201,8 +200,6 @@ function SearchContent() {
           </div>
         )}
       </main>
-
-      <BottomTabBar />
 
       {/* 날짜 카드 모달 */}
       {modalDate && (

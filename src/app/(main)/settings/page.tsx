@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { Check, Eye, EyeOff, GripVertical, Link, LogOut } from "lucide-react";
 import { useCardActionsStore, ACTION_LABELS } from "@/store/cardActions";
 import type { ActionId } from "@/store/cardActions";
-import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
 import {
@@ -131,7 +130,7 @@ export default function SettingsPage() {
     <div className={`h-dvh flex flex-col ${isDark ? "theme-dark" : "theme-light"}`}>
       <CollapsingHeader show={showHeader} />
 
-      <main className="flex-1 overflow-y-auto" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
+      <main className="flex-1 overflow-y-auto pb-16" onScroll={(e) => onScroll(e.currentTarget.scrollTop)}>
         <div className="p-6 max-w-md mx-auto space-y-8">
         {/* 공유한 링크 관리 */}
         <section>
@@ -249,7 +248,6 @@ export default function SettingsPage() {
         </div>
       </main>
 
-      <BottomTabBar />
     </div>
   );
 }

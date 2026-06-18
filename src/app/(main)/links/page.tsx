@@ -67,7 +67,7 @@ export default function LinksPage() {
         </span>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-16">
         <div className="p-4 max-w-md mx-auto space-y-8">
 
           {/* 만료 기간 설정 */}

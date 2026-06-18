@@ -8,7 +8,6 @@ import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { cardBarGradient } from "@/lib/timeColor";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
-import { BottomTabBar } from "@/components/ui/BottomTabBar";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
 import { DaySheet } from "@/components/ui/DaySheet";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
@@ -199,7 +198,7 @@ export default function FeedPage() {
       </div>
 
       {/* Cards */}
-      <main ref={scrollRef} className="flex-1 overflow-y-auto">
+      <main ref={scrollRef} className="flex-1 overflow-y-auto pb-16">
         {!initialLoaded ? (
           <div className="flex items-center justify-center h-full">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
@@ -267,13 +266,11 @@ export default function FeedPage() {
         />
       )}
 
-      <BottomTabBar />
-
       {/* 맨 위로 버튼 */}
       {showScrollTop && (
         <button
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-          className={`fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors
+          className={`fixed bottom-20 right-6 z-50 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors
             ${isDark ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-900 hover:bg-gray-700 text-white"}`}
         >
           <ArrowUp size={18} />

@@ -17,7 +17,7 @@ export function BottomTabBar() {
   const isDark = useThemeStore((s) => s.theme === "dark");
 
   return (
-    <nav className={`shrink-0 flex border-t ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200"}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-40 flex border-t ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200"}`}>
       {TABS.map(({ href, icon: Icon, label }) => {
         const active = pathname === href;
         return (

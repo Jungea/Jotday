@@ -63,7 +63,7 @@ export default function StatsPage() {
         <span className={`flex-1 text-base font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>통계</span>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-4 py-5">
+      <main className="flex-1 overflow-y-auto px-4 py-5 pb-16">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />
