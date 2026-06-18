@@ -7,7 +7,8 @@ import type { Card } from "@/types";
 
 export type ImageSlot =
   | { kind: "existing"; url: string; publicId: string }
-  | { kind: "uploaded"; url: string; publicId: string };
+  | { kind: "uploaded"; url: string; publicId: string }
+  | { kind: "pending"; tempId: string };
 
 export function cloudinaryResized(url: string, width: number): string {
   if (!url.includes("/upload/")) return url;
@@ -149,17 +150,22 @@ export function useImageSlots(editCard?: Card) {
     const idx = croppingSlotIndex;
     setCroppingSlotIndex(null);
     setCropQueue((q) => { URL.revokeObjectURL(q[0]); return q.slice(1); });
+
+    const tempId = Math.random().toString(36).slice(2);
+    if (idx !== null) {
+      setSlots((prev) => prev.map((s, i) => i === idx ? { kind: "pending" as const, tempId } : s));
+    } else {
+      setSlots((prev) => [...prev, { kind: "pending" as const, tempId }]);
+    }
+
     setUploading(true);
     try {
       const { url, publicId } = await uploadToCloudinary(file);
       const newSlot: ImageSlot = { kind: "uploaded", url, publicId };
-      if (idx !== null) {
-        setSlots((prev) => prev.map((s, i) => i === idx ? newSlot : s));
-      } else {
-        setSlots((prev) => [...prev, newSlot]);
-      }
+      setSlots((prev) => prev.map((s) => s.kind === "pending" && s.tempId === tempId ? newSlot : s));
     } catch {
       setUploadError("업로드 실패");
+      setSlots((prev) => prev.filter((s) => !(s.kind === "pending" && s.tempId === tempId)));
     }
     setUploading(false);
   }

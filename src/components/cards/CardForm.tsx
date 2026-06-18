@@ -68,11 +68,12 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         ? editCard.images.map((i) => i.public_id)
         : editCard.image_public_id ? [editCard.image_public_id] : []
       ).join(",");
-      const currentIds = slots.map((s) => s.publicId).join(",");
+      const doneSlots = slots.filter((s): s is Exclude<typeof s, { kind: "pending" }> => s.kind !== "pending");
+      const currentIds = doneSlots.map((s) => s.publicId).join(",");
 
       if (originalIds !== currentIds) {
         formData.append("images", JSON.stringify(
-          slots.map((s) => ({ url: s.url, public_id: s.publicId }))
+          doneSlots.map((s) => ({ url: s.url, public_id: s.publicId }))
         ));
       }
 
@@ -91,7 +92,9 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       formData.append("time", new Date(`${date}T${manualTime ? time : format(new Date(), "HH:mm")}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
       formData.append("images", JSON.stringify(
-        slots.map((s) => ({ url: s.url, public_id: s.publicId }))
+        slots
+          .filter((s): s is Exclude<typeof s, { kind: "pending" }> => s.kind !== "pending")
+          .map((s) => ({ url: s.url, public_id: s.publicId }))
       ));
 
       const res = await fetch("/api/cards", { method: "POST", body: formData });
@@ -184,8 +187,14 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                         dragOver === i ? "ring-2 ring-amber-400 opacity-70" : ""
                       }`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={cloudinaryResized(slot.url, 400)} alt="" className="w-full h-full object-cover pointer-events-none" />
+                      {slot.kind === "pending" ? (
+                        <div className={`w-full h-full flex items-center justify-center animate-pulse ${isDark ? "bg-gray-800" : "bg-gray-200"}`}>
+                          <div className={`w-5 h-5 border-2 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-500" : "border-gray-400"}`} />
+                        </div>
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={cloudinaryResized(slot.url, 400)} alt="" className="w-full h-full object-cover pointer-events-none" />
+                      )}
                       <button
                         type="button"
                         onClick={() => handleRemoveSlot(i)}
@@ -193,7 +202,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                       >
                         <X size={12} />
                       </button>
-                      {!isEdit && (
+                      {!isEdit && slot.kind !== "pending" && (
                         <button
                           type="button"
                           onClick={() => handleCropSlot(i)}
