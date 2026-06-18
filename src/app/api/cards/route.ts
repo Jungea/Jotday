@@ -7,6 +7,28 @@ import {
   deleteCard,
 } from "@/lib/db/cards";
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_RE = /^\d{4}-\d{2}$/;
+
+function validateDate(v: string | null): boolean {
+  return v !== null && DATE_RE.test(v);
+}
+
+function parseAndValidateTags(raw: string | null): string[] {
+  if (!raw) return [];
+  const tags = JSON.parse(raw) as unknown[];
+  if (!Array.isArray(tags) || tags.length > 20) throw new Error("태그는 최대 20개까지 허용됩니다");
+  if (tags.some((t) => typeof t !== "string" || t.length > 50)) throw new Error("태그 형식이 올바르지 않습니다");
+  return tags as string[];
+}
+
+function parseAndValidateImages(raw: string | null): { url: string; public_id: string }[] {
+  if (!raw) return [];
+  const imgs = JSON.parse(raw) as unknown[];
+  if (!Array.isArray(imgs) || imgs.length > 20) throw new Error("이미지는 최대 20개까지 허용됩니다");
+  return imgs as { url: string; public_id: string }[];
+}
+
 async function getAuthenticatedUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -26,27 +48,41 @@ export async function GET(request: NextRequest) {
     if (searchParams.get("alltags") === "true")
       return NextResponse.json(await getAllTags(supabase, user.id));
 
-    if (searchParams.get("q") !== null || searchParams.get("tags") !== null)
+    if (searchParams.get("q") !== null || searchParams.get("tags") !== null) {
+      const q = searchParams.get("q");
+      if (q && q.length > 200) return NextResponse.json({ error: "검색어가 너무 깁니다" }, { status: 400 });
+      const page = parseInt(searchParams.get("page") ?? "0", 10);
       return NextResponse.json(await searchCards(supabase, user.id, {
-        q: searchParams.get("q"),
+        q,
         tags: searchParams.get("tags"),
-        page: parseInt(searchParams.get("page") ?? "0", 10),
+        page: isNaN(page) ? 0 : page,
       }));
+    }
 
-    if (feed)
+    if (feed) {
+      const from = searchParams.get("from");
+      const to = searchParams.get("to");
+      if (from && !validateDate(from)) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
+      if (to && !validateDate(to)) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
+      const page = parseInt(searchParams.get("page") ?? "0", 10);
       return NextResponse.json(await getFeedCards(supabase, user.id, {
         sort: searchParams.get("sort") === "asc" ? "asc" : "desc",
-        from: searchParams.get("from"),
-        to: searchParams.get("to"),
+        from,
+        to,
         imagesOnly: searchParams.get("imagesOnly") === "true",
-        page: parseInt(searchParams.get("page") ?? "0", 10),
+        page: isNaN(page) ? 0 : page,
       }));
+    }
 
-    if (date)
+    if (date) {
+      if (!validateDate(date)) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
       return NextResponse.json(await getCardsByDate(supabase, user.id, date, searchParams.get("sort") !== "desc"));
+    }
 
-    if (month)
+    if (month) {
+      if (!MONTH_RE.test(month)) return NextResponse.json({ error: "잘못된 월 형식입니다" }, { status: 400 });
       return NextResponse.json(await getMonthMeta(supabase, user.id, month));
+    }
 
     return NextResponse.json({ error: "Missing query param" }, { status: 400 });
   } catch (e) {
@@ -63,21 +99,24 @@ export async function POST(request: NextRequest) {
   try {
     const copyFrom = formData.get("copy_from") as string | null;
     if (copyFrom) {
-      const data = await copyCard(supabase, user.id, copyFrom, formData.get("date") as string);
+      const copyDate = formData.get("date") as string;
+      if (!validateDate(copyDate)) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
+      const data = await copyCard(supabase, user.id, copyFrom, copyDate);
       if (!data) return NextResponse.json({ error: "Card not found" }, { status: 404 });
       return NextResponse.json(data, { status: 201 });
     }
 
-    const tagsRaw = formData.get("tags") as string | null;
-    const imagesRaw = formData.get("images") as string | null;
+    const postDate = formData.get("date") as string;
+    if (!validateDate(postDate)) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
+
     const data = await createCard(supabase, user.id, {
-      date: formData.get("date") as string,
+      date: postDate,
       type: formData.get("type") as string,
       title: formData.get("title") as string | null,
       content: formData.get("content") as string | null,
       time: formData.get("time") as string | null,
-      tags: tagsRaw ? JSON.parse(tagsRaw) : [],
-      images: imagesRaw ? JSON.parse(imagesRaw) : [],
+      tags: parseAndValidateTags(formData.get("tags") as string | null),
+      images: parseAndValidateImages(formData.get("images") as string | null),
     });
     return NextResponse.json(data, { status: 201 });
   } catch (e) {
@@ -95,8 +134,10 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const moveToDate = formData.get("move_to_date") as string | null;
-    if (moveToDate)
+    if (moveToDate) {
+      if (!validateDate(moveToDate)) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
       return NextResponse.json(await moveCardDate(supabase, user.id, id, moveToDate));
+    }
 
     if (formData.get("unset_representative") === "true")
       return NextResponse.json(await unsetRepresentative(supabase, user.id, id));
@@ -108,13 +149,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     const tagsRaw = formData.get("tags") as string | null;
+    const imagesRaw = formData.get("images") as string | null;
+    if (imagesRaw) parseAndValidateImages(imagesRaw); // 검증만, 실제 파싱은 updateCard 내부에서
     const data = await updateCard(supabase, user.id, id, {
       type: formData.get("type") as string,
       title: formData.get("title") as string | null,
       content: formData.get("content") as string | null,
       time: formData.get("time") as string | null,
-      tags: tagsRaw ? JSON.parse(tagsRaw) : undefined,
-      newImagesJson: formData.get("images") as string | null,
+      tags: tagsRaw ? parseAndValidateTags(tagsRaw) : undefined,
+      newImagesJson: imagesRaw,
     });
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(data);
