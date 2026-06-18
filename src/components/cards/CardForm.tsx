@@ -116,8 +116,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
         <ImageCropModal
           key={cropQueue[0]}
           src={cropQueue[0]}
-          current={croppingSlotIndex !== null ? undefined : slots.length + 1}
-          total={croppingSlotIndex !== null ? undefined : slots.length + cropQueue.length}
+          current={croppingSlotIndex !== null ? undefined : uploadedCount + 1}
+          total={croppingSlotIndex !== null ? undefined : uploadedCount + cropQueue.length}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />
