@@ -28,7 +28,11 @@ export async function PATCH(request: Request) {
   }
   const updates: Record<string, unknown> = { user_id: user.id };
 
-  if (body.theme !== undefined) updates.theme = body.theme;
+  if (body.theme !== undefined) {
+    if (body.theme !== "dark" && body.theme !== "light")
+      return NextResponse.json({ error: "잘못된 theme 값입니다" }, { status: 400 });
+    updates.theme = body.theme;
+  }
   if (body.card_actions !== undefined) updates.card_actions = body.card_actions;
   if (body.feed_presets !== undefined) updates.feed_presets = body.feed_presets;
   if (body.share_settings !== undefined) updates.share_settings = body.share_settings;
