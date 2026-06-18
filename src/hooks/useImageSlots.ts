@@ -135,7 +135,7 @@ export function useImageSlots(editCard?: Card) {
         const url = await compressForCrop(file);
         setCropQueue((q) => [...q, url]);
       } catch {
-        // 건너뜀
+        setUploadError("일부 이미지를 처리하지 못했어요");
       }
     }
     setUploadCount((c) => c - 1);
