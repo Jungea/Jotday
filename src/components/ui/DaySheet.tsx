@@ -9,6 +9,7 @@ import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useToastStore } from "@/store/toast";
+import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
 import type { Card } from "@/types";
 
 interface DaySheetProps {
@@ -48,6 +49,7 @@ export function DaySheet({
   const [showForm, setShowForm] = useState(false);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
   const addToast = useToastStore((s) => s.addToast);
+  useModalHistoryBack(onClose);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {

@@ -1,5 +1,7 @@
 "use client";
 
+import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
+
 interface Props {
   message: string;
   confirmLabel?: string;
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export function ConfirmModal({ message, confirmLabel = "삭제", onConfirm, onCancel, isDark }: Props) {
+  useModalHistoryBack(onCancel);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
       <div className="absolute inset-0 bg-black/40" />

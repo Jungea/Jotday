@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
 import { X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function ShareLinkModal({ url, expiresAt, onClose, isDark }: Props) {
+  useModalHistoryBack(onClose);
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {

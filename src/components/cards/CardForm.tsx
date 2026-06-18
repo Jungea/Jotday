@@ -9,6 +9,7 @@ import { CameraModal } from "@/components/cards/CameraModal";
 import { useThemeStore } from "@/store/theme";
 import { useTagAutocomplete } from "@/hooks/useTagAutocomplete";
 import { useImageSlots, cloudinaryResized } from "@/hooks/useImageSlots";
+import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
 import type { Card } from "@/types";
 
 function extractTags(text: string): string[] {
@@ -45,6 +46,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     handleCropSlot, handleRemoveSlot, handleDragStart, handleDragOver, handleDrop, handleDragEnd,
     handleTouchStart, handleTouchEnd, slotContainerRef,
   } = useImageSlots(editCard);
+
+  useModalHistoryBack(onCancel);
 
   const busy = uploading || loading;
   const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
