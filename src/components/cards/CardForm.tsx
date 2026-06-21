@@ -128,7 +128,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           onCancel={handleCropCancel}
         />
       )}
-      <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-[70]">
         <div className={`${isDark ? "bg-[#1c1c1c]" : "bg-white"} rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md max-h-[85dvh] flex flex-col`}>
           <div className={`flex items-center justify-between px-5 pt-5 pb-3 border-b ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
             <h2 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>{isEdit ? "카드 수정" : `${date} 기록`}</h2>
