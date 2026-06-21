@@ -69,9 +69,10 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
           )}
         </div>
         <div className="flex flex-wrap overflow-y-auto max-h-28 gap-1 px-2 pt-1 pb-2">
-          {recent.map((item, i) => {
+          {recent.map((item) => {
             function removeItem() {
-              const next = recent.filter((_, idx) => idx !== i);
+              const current = useRecentEmojisStore.getState().items;
+              const next = current.filter((e) => e !== item);
               setItems(next);
               if (next.length === 0) setDeleteMode(false);
               fetch("/api/settings", {
@@ -81,7 +82,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
               });
             }
             return (
-              <div key={`${item}-${i}`} className="flex-none relative mt-1">
+              <div key={item} className="flex-none relative mt-1">
                 <button
                   type="button"
                   onClick={() => { if (!deleteMode) onChange(value + item); }}
