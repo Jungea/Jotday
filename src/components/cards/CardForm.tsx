@@ -31,7 +31,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
 
   const [content, setContent] = useState(editCard?.content ?? "");
   const [visualText, setVisualText] = useState(editCard?.emojis?.[0] ?? "");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(!!(editCard?.emojis?.[0]));
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
   const [manualTime, setManualTime] = useState(false);
   const [loading, setLoading] = useState(false);
