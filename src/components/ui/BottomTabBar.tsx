@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, LayoutList, Search, Settings } from "lucide-react";
 import { useThemeStore } from "@/store/theme";
+import { useUIStore } from "@/store/ui";
 
 const TABS = [
   { href: "/",         icon: CalendarDays, label: "달력" },
@@ -15,9 +16,10 @@ const TABS = [
 export function BottomTabBar() {
   const pathname = usePathname();
   const isDark = useThemeStore((s) => s.theme === "dark");
+  const showNav = useUIStore((s) => s.showNav);
 
   return (
-    <nav className={`fixed bottom-0 left-0 right-0 z-40 flex border-t ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200"}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 z-40 flex border-t transition-transform duration-300 ${showNav ? "translate-y-0" : "translate-y-full"} ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200"}`}>
       {TABS.map(({ href, icon: Icon, label }) => {
         const active = pathname === href;
         return (
