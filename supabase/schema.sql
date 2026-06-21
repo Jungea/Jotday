@@ -35,7 +35,7 @@ CREATE POLICY "Users can manage own cards" ON cards
 -- User settings table
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  theme TEXT NOT NULL DEFAULT 'dark' CHECK (theme IN ('light', 'dark')),
+  theme TEXT DEFAULT 'dark',
   card_actions JSONB,
   feed_presets JSONB,
   share_settings JSONB,

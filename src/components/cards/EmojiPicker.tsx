@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useThemeStore } from "@/store/theme";
 import { useRecentEmojisStore } from "@/store/recentEmojis";
 
-const RECENT_KEY = "jotday_recent_emojis";
 const MAX_RECENT = 32;
 
 export async function saveRecent(value: string) {
@@ -12,7 +11,6 @@ export async function saveRecent(value: string) {
   const { items, setItems } = useRecentEmojisStore.getState();
   const next = [value.trim(), ...items.filter((e) => e !== value.trim())].slice(0, MAX_RECENT);
   setItems(next);
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
   await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -75,7 +73,6 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
             function removeItem() {
               const next = recent.filter((_, idx) => idx !== i);
               setItems(next);
-              try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
               if (next.length === 0) setDeleteMode(false);
               fetch("/api/settings", {
                 method: "PATCH",

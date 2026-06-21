@@ -26,7 +26,7 @@ export async function PATCH(request: Request) {
   } catch {
     return NextResponse.json({ error: "잘못된 요청입니다" }, { status: 400 });
   }
-  const updates: Record<string, unknown> = { user_id: user.id };
+  const updates: Record<string, unknown> = {};
 
   if (body.theme !== undefined) {
     if (body.theme !== "dark" && body.theme !== "light")
@@ -38,7 +38,10 @@ export async function PATCH(request: Request) {
   if (body.share_settings !== undefined) updates.share_settings = body.share_settings;
   if (Array.isArray(body.recent_emojis)) updates.recent_emojis = body.recent_emojis;
 
-  await supabase.from("user_settings").upsert(updates, { onConflict: "user_id" });
+  const { error } = await supabase
+    .from("user_settings")
+    .upsert({ user_id: user.id, ...updates }, { onConflict: "user_id" });
+  if (error) console.error("[settings PATCH]", error);
 
   return NextResponse.json({ ok: true });
 }
