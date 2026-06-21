@@ -11,15 +11,29 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* z-index 레이어 */
-  --z-tab: 40;       /* 하단 탭바 */
-  --z-fab: 50;       /* FAB 버튼 */
-  --z-sheet: 60;     /* 바텀 시트, 기본 모달 */
-  --z-modal: 70;     /* 카드폼, 카메라, 라이트박스 */
-  --z-crop: 80;      /* 이미지 크롭 (모달 위) */
-  --z-toast: 100;    /* 토스트 알림 */
-  --z-menu-back: 199; /* 메뉴 백드롭 */
-  --z-menu: 200;     /* 컨텍스트 메뉴, 태그 드롭다운 */
+}
+
+/* z-index 레이어 */
+:root {
+  --z-tab: 40;
+  --z-fab: 50;
+  --z-sheet: 60;
+  --z-modal: 70;
+  --z-crop: 80;
+  --z-toast: 100;
+  --z-menu-back: 199;
+  --z-menu: 200;
+}
+
+@layer utilities {
+  .z-tab       { z-index: var(--z-tab); }
+  .z-fab       { z-index: var(--z-fab); }
+  .z-sheet     { z-index: var(--z-sheet); }
+  .z-modal     { z-index: var(--z-modal); }
+  .z-crop      { z-index: var(--z-crop); }
+  .z-toast     { z-index: var(--z-toast); }
+  .z-menu-back { z-index: var(--z-menu-back); }
+  .z-menu      { z-index: var(--z-menu); }
 }
 
 @media (prefers-color-scheme: dark) {
