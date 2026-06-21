@@ -1,16 +1,8 @@
 const STATIC_CACHE = "jotday-static-v1";
-const PAGE_CACHE = "jotday-pages-v1";
 
-// 설치: 메인 페이지 미리 캐시 + 즉시 활성화
+// 설치: 즉시 활성화
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    Promise.all([
-      caches.open(PAGE_CACHE).then((cache) =>
-        fetch("/").then((res) => { if (res.ok) cache.put("/", res); }).catch(() => {})
-      ),
-      self.skipWaiting(),
-    ])
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 // 활성화: 이전 캐시 정리
@@ -19,7 +11,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith("jotday-") && k !== STATIC_CACHE && k !== PAGE_CACHE)
+          .filter((k) => k.startsWith("jotday-") && k !== STATIC_CACHE)
           .map((k) => caches.delete(k))
       )
     )
@@ -31,7 +23,7 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // /_next/static/ 파일: 콘텐츠 해시로 고유하므로 영구 캐시
+  // /_next/static/ 파일: 콘텐츠 해시 기반이므로 영구 캐시
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
@@ -63,22 +55,5 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 페이지 HTML: stale-while-revalidate (캐시 즉시 응답 후 백그라운드 갱신)
-  if (request.mode === "navigate") {
-    event.respondWith(
-      caches.open(PAGE_CACHE).then(async (cache) => {
-        const cached = await cache.match(request);
-        const networkFetch = fetch(request)
-          .then((res) => {
-            if (res.ok) cache.put(request, res.clone());
-            return res;
-          })
-          .catch(() => cached ?? new Response("오프라인 상태입니다", { status: 503 }));
-        return cached ?? networkFetch;
-      })
-    );
-    return;
-  }
-
-  // 그 외(API): 항상 네트워크 우선
+  // 페이지 HTML 및 API: 브라우저가 직접 네트워크에 요청 (SW 미개입)
 });

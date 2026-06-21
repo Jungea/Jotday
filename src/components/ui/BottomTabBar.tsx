@@ -26,6 +26,7 @@ export function BottomTabBar() {
           <Link
             key={href}
             href={href}
+            prefetch={false}
             className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors
               ${active
                 ? isDark ? "text-white" : "text-gray-900"
