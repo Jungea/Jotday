@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("user_settings")
-    .select("theme, card_actions, feed_presets, share_settings")
+    .select("theme, card_actions, feed_presets, share_settings, recent_emojis")
     .eq("user_id", user.id)
     .single();
 
@@ -36,6 +36,7 @@ export async function PATCH(request: Request) {
   if (body.card_actions !== undefined) updates.card_actions = body.card_actions;
   if (body.feed_presets !== undefined) updates.feed_presets = body.feed_presets;
   if (body.share_settings !== undefined) updates.share_settings = body.share_settings;
+  if (Array.isArray(body.recent_emojis)) updates.recent_emojis = body.recent_emojis;
 
   await supabase.from("user_settings").upsert(updates, { onConflict: "user_id" });
 

@@ -214,7 +214,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
 
       {/* 연도/월 빠른 점프 */}
       {showJump && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-sheet flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowJump(false)} />
           <div
             className={`relative rounded-t-2xl px-5 pt-4 pb-10 ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}
@@ -331,6 +331,11 @@ function DayCell({
           className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65"
         />
       )}
+      {hasRecord && !meta?.preview_image && meta?.preview_emoji && (
+        <div className={`absolute inset-0 flex items-center justify-center rounded-md ${isDark ? "bg-[#1a2535]" : "bg-gray-100"}`}>
+          <span className="text-2xl leading-none">{meta.preview_emoji}</span>
+        </div>
+      )}
 
       {/* 날짜 — 모바일: 상단 가운데 / 데스크탑: 좌상단 */}
       <span
@@ -388,6 +393,11 @@ function GhostDayCell({ day, meta, isDark, onClick }: { day: Date; meta?: DayMet
       {hasRecord && meta?.preview_image && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={meta.preview_image} alt="" className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65" />
+      )}
+      {hasRecord && !meta?.preview_image && meta?.preview_emoji && (
+        <div className={`absolute inset-0 flex items-center justify-center rounded-md ${isDark ? "bg-[#1a2535]" : "bg-gray-100"}`}>
+          <span className="text-2xl leading-none">{meta.preview_emoji}</span>
+        </div>
       )}
       <span className={`absolute z-10 text-xs font-medium
         top-1.5 left-1/2 -translate-x-1/2 w-6 h-6 flex items-center justify-center rounded-full

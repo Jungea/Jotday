@@ -145,7 +145,7 @@ export function DateRangePicker({ from, to, onChange, isDark }: Props) {
 
       {/* Bottom sheet */}
       {open && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+        <div className="fixed inset-0 z-sheet flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => { setOpen(false); setShowJump(false); }} />
 
           <div className={`relative rounded-t-2xl px-5 pt-4 pb-10 ${c.bg}`}>

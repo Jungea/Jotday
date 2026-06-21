@@ -2,10 +2,11 @@
 
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { X, Upload, Camera } from "lucide-react";
+import { X, Upload, Camera, Type } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { CameraModal } from "@/components/cards/CameraModal";
+import { EmojiPicker, saveRecent } from "@/components/cards/EmojiPicker";
 import { useThemeStore } from "@/store/theme";
 import { useTagAutocomplete } from "@/hooks/useTagAutocomplete";
 import { useImageSlots, cloudinaryResized } from "@/hooks/useImageSlots";
@@ -29,6 +30,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const isEdit = !!editCard;
 
   const [content, setContent] = useState(editCard?.content ?? "");
+  const [visualText, setVisualText] = useState(editCard?.emojis?.[0] ?? "");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
   const [manualTime, setManualTime] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,6 +61,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setError(null);
     setUploadError(null);
     setLoading(true);
+    if (visualText.trim()) saveRecent(visualText.trim());
 
     if (isEdit) {
       const formData = new FormData();
@@ -66,6 +70,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       if (content) formData.append("content", content);
       if (time) formData.append("time", new Date(`${date}T${time}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
+      formData.append("emojis", JSON.stringify(visualText.trim() ? [visualText.trim()] : []));
 
       const originalIds = (editCard.images?.length > 0
         ? editCard.images.map((i) => i.public_id)
@@ -94,6 +99,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       if (content) formData.append("content", content);
       formData.append("time", new Date(`${date}T${manualTime ? time : format(new Date(), "HH:mm")}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
+      formData.append("emojis", JSON.stringify(visualText.trim() ? [visualText.trim()] : []));
       formData.append("images", JSON.stringify(
         slots
           .filter((s): s is Exclude<typeof s, { kind: "pending" }> => s.kind !== "pending")
@@ -128,7 +134,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           onCancel={handleCropCancel}
         />
       )}
-      <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-[70]">
+      <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-modal">
         <div className={`${isDark ? "bg-[#1c1c1c]" : "bg-white"} rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md max-h-[85dvh] flex flex-col`}>
           <div className={`flex items-center justify-between px-5 pt-5 pb-3 border-b ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
             <h2 className={`font-bold text-lg ${isDark ? "text-white" : "text-gray-900"}`}>{isEdit ? "카드 수정" : `${date} 기록`}</h2>
@@ -228,8 +234,21 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
                 >
                   <Camera size={16} />
                 </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => setShowEmojiPicker((v) => !v)}
+                  className={`h-14 px-4 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors ${loading ? "opacity-40 cursor-not-allowed" : ""} ${showEmojiPicker || visualText ? isDark ? "border-gray-500 text-white" : "border-gray-500 text-gray-800" : isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                >
+                  <Type size={16} />
+                </button>
               </div>
               <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
+
+              {/* 비주얼 텍스트 피커 */}
+              {showEmojiPicker && (
+                <EmojiPicker value={visualText} onChange={setVisualText} />
+              )}
 
               <textarea
                 ref={textareaRef}
@@ -242,7 +261,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               />
               {tagSuggestions.length > 0 && dropdownPos && (
                 <ul
-                  className={`fixed z-[200] rounded-xl shadow-lg border overflow-hidden min-w-[140px] ${isDark ? "bg-[#2a2a2a] border-gray-700" : "bg-white border-gray-200"}`}
+                  className={`fixed z-menu rounded-xl shadow-lg border overflow-hidden min-w-[140px] ${isDark ? "bg-[#2a2a2a] border-gray-700" : "bg-white border-gray-200"}`}
                   style={{ top: dropdownPos.top, left: dropdownPos.left }}
                 >
                   {tagSuggestions.map((tag, i) => (

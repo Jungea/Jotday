@@ -116,7 +116,7 @@ function HomeContent() {
       </main>
 
       {/* FAB */}
-      <div className="fixed bottom-20 right-5 z-50 flex flex-col items-center gap-2">
+      <div className="fixed bottom-20 right-5 z-fab flex flex-col items-center gap-2">
         <button
           onClick={() => setShowQuickCamera(true)}
           className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors

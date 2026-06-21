@@ -29,6 +29,14 @@ function parseAndValidateImages(raw: string | null): { url: string; public_id: s
   return imgs as { url: string; public_id: string }[];
 }
 
+function parseAndValidateEmojis(raw: string | null): string[] {
+  if (!raw) return [];
+  const emojis = JSON.parse(raw) as unknown[];
+  if (!Array.isArray(emojis) || emojis.length > 5) throw new Error("이모티콘은 최대 5개까지 허용됩니다");
+  if (emojis.some((e) => typeof e !== "string")) throw new Error("이모티콘 형식이 올바르지 않습니다");
+  return emojis as string[];
+}
+
 async function getAuthenticatedUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -118,6 +126,7 @@ export async function POST(request: NextRequest) {
       time: formData.get("time") as string | null,
       tags: parseAndValidateTags(formData.get("tags") as string | null),
       images: parseAndValidateImages(formData.get("images") as string | null),
+      emojis: parseAndValidateEmojis(formData.get("emojis") as string | null),
     });
     return NextResponse.json(data, { status: 201 });
   } catch (e) {
@@ -152,6 +161,7 @@ export async function PATCH(request: NextRequest) {
 
     const tagsRaw = formData.get("tags") as string | null;
     const imagesRaw = formData.get("images") as string | null;
+    const emojisRaw = formData.get("emojis") as string | null;
     if (imagesRaw) parseAndValidateImages(imagesRaw); // 검증만, 실제 파싱은 updateCard 내부에서
     const data = await updateCard(supabase, user.id, id, {
       type: formData.get("type") as string,
@@ -160,6 +170,7 @@ export async function PATCH(request: NextRequest) {
       time: formData.get("time") as string | null,
       tags: tagsRaw ? parseAndValidateTags(tagsRaw) : undefined,
       newImagesJson: imagesRaw,
+      emojis: emojisRaw !== null ? parseAndValidateEmojis(emojisRaw) : undefined,
     });
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(data);

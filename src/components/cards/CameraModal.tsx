@@ -272,7 +272,7 @@ export function CameraModal({ onCapture, onCancel }: Props) {
   const isCountingDown = countdown !== null;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black flex flex-col">
+    <div className="fixed inset-0 z-modal bg-black flex flex-col">
       {/* 상단 바 */}
       <div
         className="flex items-center justify-between px-4 shrink-0 bg-black"

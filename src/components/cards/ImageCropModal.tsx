@@ -253,7 +253,7 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[60] overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none"
+      className="fixed inset-0 z-crop overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

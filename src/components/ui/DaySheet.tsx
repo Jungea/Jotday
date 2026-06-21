@@ -146,7 +146,7 @@ export function DaySheet({
 
   return (
     <>
-      <div className={`fixed inset-0 z-[60] flex flex-col justify-end ${showBackdrop ? "" : "pointer-events-none"}`}>
+      <div className={`fixed inset-0 z-sheet flex flex-col justify-end ${showBackdrop ? "" : "pointer-events-none"}`}>
         {showBackdrop && <div className="absolute inset-0 bg-black/50" onClick={onClose} />}
         <div
           className={`relative flex flex-col pointer-events-auto ${expanded ? "rounded-none" : "rounded-t-2xl"} ${isDark ? "bg-[#1a1a1a]" : "bg-white"}`}

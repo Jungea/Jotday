@@ -155,7 +155,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       {/* FAB */}
       <button
         onClick={() => setShowForm(true)}
-        className={`fixed bottom-20 right-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
+        className={`fixed bottom-20 right-6 z-fab w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
           ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
       >
         <Plus size={22} />

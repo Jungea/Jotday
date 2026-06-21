@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS cards (
   image_url TEXT,
   image_public_id TEXT,
   images JSONB DEFAULT '[]'::jsonb,
+  emojis TEXT[] DEFAULT '{}',
   tags TEXT[] DEFAULT '{}',
   is_representative BOOLEAN DEFAULT false NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   card_actions JSONB,
   feed_presets JSONB,
   share_settings JSONB,
+  recent_emojis TEXT[] DEFAULT '{}',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

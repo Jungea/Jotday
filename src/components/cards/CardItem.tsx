@@ -14,6 +14,15 @@ import { ImageSwiper } from "@/components/cards/ImageSwiper";
 import { downloadCard, downloadAllCards } from "@/lib/download";
 import type { Card } from "@/types";
 
+function textToHsl(str: string, isDark: boolean) {
+  let hash = 0;
+  for (const ch of str) hash = (ch.codePointAt(0) ?? 0) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return isDark
+    ? `hsl(${hue}, 30%, 18%), hsl(${hue}, 40%, 10%)`
+    : `hsl(${hue}, 40%, 92%), hsl(${hue}, 50%, 82%)`;
+}
+
 interface CardItemProps {
   card: Card;
   isDark?: boolean;
@@ -82,7 +91,7 @@ function ActionButtons({ size, btnBg, isDark, pinned, order, showMore, setShowMo
   }
 
   const p = pinned;
-  const menuClass = `fixed z-[200] rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
+  const menuClass = `fixed z-menu rounded-xl shadow-lg py-1 min-w-[120px] ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`;
   const itemClass = (active?: boolean) => `w-full flex items-center gap-2.5 px-3 py-2 text-xs ${active ? (isDark ? "text-white" : "text-gray-900") : (isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50")}`;
   const btnClass = `${btnBg} rounded-full p-1.5 shadow ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-900"}`;
 
@@ -125,7 +134,7 @@ function ActionButtons({ size, btnBg, isDark, pinned, order, showMore, setShowMo
           </button>
           {showMore && menuPos && createPortal(
             <>
-              <div className="fixed inset-0 z-[199]" onClick={() => setShowMore(false)} />
+              <div className="fixed inset-0 z-menu-back" onClick={() => setShowMore(false)} />
               <div className={menuClass} style={menuPos}>{overflowEls}</div>
             </>,
             document.body
@@ -348,6 +357,33 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
           {images.length > 0 && (
             <div className={`relative z-[1] overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
               <ImageSwiper images={images} disableLightbox={disableLightbox} />
+              {card.emojis?.length > 0 && (
+                <div className="absolute bottom-2 left-3 flex gap-1 z-10">
+                  {card.emojis.map((e, i) => (
+                    <span key={`${e}-${i}`} className="text-2xl drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">{e}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {images.length === 0 && card.emojis?.length > 0 && (
+            <div
+              className={`flex items-center justify-center px-6 py-8 ${card.content ? "rounded-t-xl" : "rounded-xl"}`}
+              style={{ background: `linear-gradient(135deg, ${textToHsl(card.emojis[0], isDark ?? false)})` }}
+            >
+              {card.emojis.map((e, i) => {
+                const len = e.length;
+                const fs = len <= 2 ? "3.5rem" : len <= 6 ? "2rem" : "1.2rem";
+                return (
+                  <span
+                    key={`${e}-${i}`}
+                    className={`leading-none text-center ${isDark ? "text-white" : "text-gray-900"}`}
+                    style={{ fontSize: fs }}
+                  >
+                    {e}
+                  </span>
+                );
+              })}
             </div>
           )}
           <div className="flex items-stretch">
@@ -374,7 +410,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
       </div>
 
       {showMoveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40">
           <div className={`rounded-2xl p-5 w-72 shadow-xl ${isDark ? "bg-[#1c1c1c]" : "bg-white"}`}>
             <h3 className={`font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>날짜 이동</h3>
             <input

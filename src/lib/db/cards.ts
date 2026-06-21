@@ -65,16 +65,22 @@ export async function getCardsByDate(db: DB, userId: string, date: string, ascen
   return data ?? [];
 }
 
-function aggregateMonthMeta(rows: { date: string; image_url: string | null; is_representative: boolean }[]): DayMeta[] {
-  const map = new Map<string, { count: number; preview_image: string | null }>();
+function aggregateMonthMeta(rows: { date: string; image_url: string | null; emojis: string[] | null; is_representative: boolean }[]): DayMeta[] {
+  const map = new Map<string, { count: number; preview_image: string | null; preview_emoji: string | null }>();
   for (const row of rows) {
+    const firstEmoji = row.emojis?.[0] ?? null;
     const existing = map.get(row.date);
     if (!existing) {
-      map.set(row.date, { count: 1, preview_image: row.image_url });
+      map.set(row.date, { count: 1, preview_image: row.image_url, preview_emoji: row.image_url ? null : firstEmoji });
     } else {
       existing.count++;
-      if (row.is_representative && row.image_url) existing.preview_image = row.image_url;
-      else if (!existing.preview_image && row.image_url) existing.preview_image = row.image_url;
+      if (row.is_representative) {
+        if (row.image_url) { existing.preview_image = row.image_url; existing.preview_emoji = null; }
+        else if (firstEmoji) { existing.preview_emoji = firstEmoji; }
+      } else if (!existing.preview_image) {
+        if (row.image_url) existing.preview_image = row.image_url;
+        else if (!existing.preview_emoji && firstEmoji) existing.preview_emoji = firstEmoji;
+      }
     }
   }
   return Array.from(map.entries()).map(([date, meta]) => ({ date, ...meta }));
@@ -86,7 +92,7 @@ export async function getMonthMeta(db: DB, userId: string, month: string): Promi
   const end = `${year}-${String(mon === 12 ? 1 : mon + 1).padStart(2, "0")}-01`;
   const { data, error } = await db
     .from("cards")
-    .select("date, image_url, is_representative")
+    .select("date, image_url, emojis, is_representative")
     .eq("user_id", userId)
     .gte("date", start)
     .lt("date", end)
@@ -100,6 +106,7 @@ export async function getMonthMeta(db: DB, userId: string, month: string): Promi
 export async function createCard(db: DB, userId: string, opts: {
   date: string; type: string; title: string | null; content: string | null;
   time: string | null; tags: string[]; images: { url: string; public_id: string }[];
+  emojis: string[];
 }): Promise<Card> {
   const insert: Record<string, unknown> = {
     user_id: userId,
@@ -110,6 +117,7 @@ export async function createCard(db: DB, userId: string, opts: {
     image_url: opts.images[0]?.url ?? null,
     image_public_id: opts.images[0]?.public_id ?? null,
     images: opts.images,
+    emojis: opts.emojis,
     tags: opts.tags,
   };
   if (opts.time) insert.created_at = opts.time;
@@ -148,6 +156,7 @@ export async function copyCard(db: DB, userId: string, copyFrom: string, copyDat
     user_id: userId, date: copyDate, type: original.type, title: original.title,
     content: original.content, image_url: newImages[0]?.url ?? null,
     image_public_id: newImages[0]?.public_id ?? null, images: newImages,
+    emojis: original.emojis ?? [],
     tags: original.tags, created_at,
   }).select().single();
   if (error) throw new Error(error.message);
@@ -188,6 +197,7 @@ export async function setRepresentative(db: DB, userId: string, id: string): Pro
 export async function updateCard(db: DB, userId: string, id: string, opts: {
   type: string; title: string | null; content: string | null;
   time: string | null; tags: string[] | undefined; newImagesJson: string | null;
+  emojis: string[] | undefined;
 }): Promise<Card | null> {
   const { data: existing } = await db.from("cards")
     .select("image_public_id, images, date, created_at").eq("id", id).eq("user_id", userId).single();
@@ -212,6 +222,7 @@ export async function updateCard(db: DB, userId: string, id: string, opts: {
     title: opts.title || null,
     content: opts.content || null,
     ...(opts.tags !== undefined && { tags: opts.tags }),
+    ...(opts.emojis !== undefined && { emojis: opts.emojis }),
     ...(newImages !== undefined && {
       images: newImages,
       image_url: newImages[0]?.url ?? null,

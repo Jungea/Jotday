@@ -59,6 +59,8 @@ export function SettingsSync() {
             if (data.share_settings.daySort)
               useShareSettingsStore.getState().setDaySort(data.share_settings.daySort);
           }
+          if (Array.isArray(data.recent_emojis) && data.recent_emojis.length > 0)
+            localStorage.setItem("jotday_recent_emojis", JSON.stringify(data.recent_emojis));
         }
       })
       .finally(() => {

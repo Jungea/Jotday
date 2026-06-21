@@ -270,7 +270,7 @@ export default function FeedPage() {
       {showScrollTop && (
         <button
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-          className={`fixed bottom-20 right-6 z-50 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors
+          className={`fixed bottom-20 right-6 z-fab w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors
             ${isDark ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-900 hover:bg-gray-700 text-white"}`}
         >
           <ArrowUp size={18} />

@@ -13,7 +13,7 @@ interface Props {
 export function ConfirmModal({ message, confirmLabel = "삭제", onConfirm, onCancel, isDark }: Props) {
   useModalHistoryBack(onCancel);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
+    <div className="fixed inset-0 z-sheet flex items-end justify-center" onClick={onCancel}>
       <div className="absolute inset-0 bg-black/40" />
       <div
         className={`relative w-full max-w-md rounded-t-2xl p-6 ${isDark ? "bg-[#1c1c1c]" : "bg-white"}`}

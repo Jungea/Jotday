@@ -193,7 +193,7 @@ export function Lightbox({ images, startIndex, onClose }: { images: { url: strin
   const slideTransition = withSlideTransition.current;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black select-none" style={{ touchAction: "none" }}>
+    <div className="fixed inset-0 z-modal bg-black select-none" style={{ touchAction: "none" }}>
       <div
         ref={containerRef}
         className="w-full h-full overflow-hidden"
