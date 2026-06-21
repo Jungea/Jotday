@@ -6,9 +6,6 @@ import { useThemeStore } from "@/store/theme";
 const RECENT_KEY = "jotday_recent_emojis";
 const MAX_RECENT = 32;
 
-function extractEmojis(str: string): string[] {
-  return [...str.matchAll(/\p{Extended_Pictographic}/gu)].map((m) => m[0]);
-}
 
 function getRecent(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }

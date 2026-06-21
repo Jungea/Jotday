@@ -357,33 +357,30 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
           {images.length > 0 && (
             <div className={`relative z-[1] overflow-hidden ${card.content ? "rounded-t-xl" : "rounded-xl"}`}>
               <ImageSwiper images={images} disableLightbox={disableLightbox} />
-              {card.emojis?.length > 0 && (
-                <div className="absolute bottom-2 left-3 flex gap-1 z-10">
-                  {card.emojis.map((e, i) => (
-                    <span key={`${e}-${i}`} className="text-2xl drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">{e}</span>
-                  ))}
+              {card.emojis?.[0] && (
+                <div className="absolute bottom-2 left-3 z-10">
+                  <span className="text-2xl drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">{card.emojis[0]}</span>
                 </div>
               )}
             </div>
           )}
-          {images.length === 0 && card.emojis?.length > 0 && (
+          {images.length === 0 && card.emojis?.[0] && (
             <div
               className={`flex items-center justify-center px-6 py-8 ${card.content ? "rounded-t-xl" : "rounded-xl"}`}
               style={{ background: `linear-gradient(135deg, ${textToHsl(card.emojis[0], isDark ?? false)})` }}
             >
-              {card.emojis.map((e, i) => {
-                const len = e.length;
-                const fs = len <= 2 ? "6rem" : len <= 6 ? "3.5rem" : "2rem";
+              {(() => {
+                const e = card.emojis[0];
+                const fs = e.length <= 2 ? "6rem" : e.length <= 6 ? "3.5rem" : "2rem";
                 return (
                   <span
-                    key={`${e}-${i}`}
                     className={`leading-none text-center ${isDark ? "text-white" : "text-gray-900"}`}
                     style={{ fontSize: fs }}
                   >
                     {e}
                   </span>
                 );
-              })}
+              })()}
             </div>
           )}
           <div className="flex items-stretch">

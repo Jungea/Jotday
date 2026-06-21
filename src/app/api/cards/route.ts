@@ -32,8 +32,7 @@ function parseAndValidateImages(raw: string | null): { url: string; public_id: s
 function parseAndValidateEmojis(raw: string | null): string[] {
   if (!raw) return [];
   const emojis = JSON.parse(raw) as unknown[];
-  if (!Array.isArray(emojis) || emojis.length > 5) throw new Error("이모티콘은 최대 5개까지 허용됩니다");
-  if (emojis.some((e) => typeof e !== "string")) throw new Error("이모티콘 형식이 올바르지 않습니다");
+  if (!Array.isArray(emojis) || emojis.some((e) => typeof e !== "string")) throw new Error("이모티콘 형식이 올바르지 않습니다");
   return emojis as string[];
 }
 
