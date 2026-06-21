@@ -5,6 +5,7 @@ import { useThemeStore } from "@/store/theme";
 import { useCardActionsStore, DEFAULT_ORDER, type ActionId } from "@/store/cardActions";
 import { useFeedPresetsStore } from "@/store/feedPresets";
 import { useShareSettingsStore } from "@/store/shareSettings";
+import { useRecentEmojisStore } from "@/store/recentEmojis";
 
 export function SettingsSync() {
   const isSyncingRef = useRef(true);
@@ -60,7 +61,7 @@ export function SettingsSync() {
               useShareSettingsStore.getState().setDaySort(data.share_settings.daySort);
           }
           if (Array.isArray(data.recent_emojis) && data.recent_emojis.length > 0)
-            localStorage.setItem("jotday_recent_emojis", JSON.stringify(data.recent_emojis));
+            useRecentEmojisStore.getState().setItems(data.recent_emojis);
         }
       })
       .finally(() => {

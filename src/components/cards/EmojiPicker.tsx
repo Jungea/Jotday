@@ -2,19 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useThemeStore } from "@/store/theme";
+import { useRecentEmojisStore } from "@/store/recentEmojis";
 
-const RECENT_KEY = "jotday_recent_emojis";
 const MAX_RECENT = 32;
 
-
-function getRecent(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
-}
 export async function saveRecent(value: string) {
   if (!value.trim()) return;
-  const prev = getRecent().filter((e) => e !== value.trim());
-  const next = [value.trim(), ...prev].slice(0, MAX_RECENT);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  const { items, setItems } = useRecentEmojisStore.getState();
+  const next = [value.trim(), ...items.filter((e) => e !== value.trim())].slice(0, MAX_RECENT);
+  setItems(next);
   await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -29,10 +25,12 @@ interface EmojiPickerProps {
 
 export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
   const isDark = useThemeStore((s) => s.theme === "dark");
-  const [recent, setRecent] = useState<string[]>([]);
+  const recent = useRecentEmojisStore((s) => s.items);
+  const setItems = useRecentEmojisStore((s) => s.setItems);
+  const hydrate = useRecentEmojisStore((s) => s.hydrate);
   const [deleteMode, setDeleteMode] = useState(false);
 
-  useEffect(() => { setRecent(getRecent()); }, []);
+  useEffect(() => { hydrate(); }, [hydrate]);
 
   return (
     <div className={`rounded-xl border ${isDark ? "bg-[#1a1a1a] border-gray-800" : "bg-gray-50 border-gray-200"}`}>
@@ -77,8 +75,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
           {recent.map((item, i) => {
             function removeItem() {
               const next = recent.filter((_, idx) => idx !== i);
-              localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-              setRecent(next);
+              setItems(next);
               if (next.length === 0) setDeleteMode(false);
               fetch("/api/settings", {
                 method: "PATCH",
@@ -90,7 +87,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
               <div key={`${item}-${i}`} className="flex-none relative mt-1">
                 <button
                   type="button"
-                  onClick={() => { if (!deleteMode) onChange(item); }}
+                  onClick={() => { if (!deleteMode) onChange(value + item); }}
                   className={`flex items-center justify-center h-9 px-2 rounded-lg text-sm whitespace-nowrap transition-all ${isDark ? "text-white hover:bg-gray-800 active:bg-gray-700" : "text-gray-900 hover:bg-gray-200 active:bg-gray-300"}`}
                   style={isDark ? { filter: "drop-shadow(0 0 2px rgba(255,255,255,0.5))" } : undefined}
                 >
