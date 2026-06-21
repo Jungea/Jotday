@@ -29,7 +29,7 @@ export function ConfirmModal({ message, confirmLabel = "삭제", onConfirm, onCa
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600"
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-400 text-white hover:bg-red-500"
           >
             {confirmLabel}
           </button>
