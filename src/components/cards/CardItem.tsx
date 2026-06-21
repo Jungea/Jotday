@@ -371,7 +371,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
             >
               {(() => {
                 const e = card.emojis[0];
-                const fs = e.length <= 2 ? "6rem" : e.length <= 6 ? "3.5rem" : "2rem";
+                const fs = e.length <= 2 ? "4rem" : e.length <= 6 ? "2.5rem" : "1.5rem";
                 return (
                   <span
                     className={`leading-none text-center ${isDark ? "text-white" : "text-gray-900"}`}

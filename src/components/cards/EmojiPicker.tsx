@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useThemeStore } from "@/store/theme";
 import { useRecentEmojisStore } from "@/store/recentEmojis";
 
+const RECENT_KEY = "jotday_recent_emojis";
 const MAX_RECENT = 32;
 
 export async function saveRecent(value: string) {
@@ -11,6 +12,7 @@ export async function saveRecent(value: string) {
   const { items, setItems } = useRecentEmojisStore.getState();
   const next = [value.trim(), ...items.filter((e) => e !== value.trim())].slice(0, MAX_RECENT);
   setItems(next);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
   await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -27,10 +29,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
   const isDark = useThemeStore((s) => s.theme === "dark");
   const recent = useRecentEmojisStore((s) => s.items);
   const setItems = useRecentEmojisStore((s) => s.setItems);
-  const hydrate = useRecentEmojisStore((s) => s.hydrate);
   const [deleteMode, setDeleteMode] = useState(false);
-
-  useEffect(() => { hydrate(); }, [hydrate]);
 
   return (
     <div className={`rounded-xl border ${isDark ? "bg-[#1a1a1a] border-gray-800" : "bg-gray-50 border-gray-200"}`}>
@@ -76,6 +75,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
             function removeItem() {
               const next = recent.filter((_, idx) => idx !== i);
               setItems(next);
+              try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch {}
               if (next.length === 0) setDeleteMode(false);
               fetch("/api/settings", {
                 method: "PATCH",
