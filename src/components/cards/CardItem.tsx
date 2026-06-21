@@ -373,7 +373,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
             >
               {card.emojis.map((e, i) => {
                 const len = e.length;
-                const fs = len <= 2 ? "3.5rem" : len <= 6 ? "2rem" : "1.2rem";
+                const fs = len <= 2 ? "6rem" : len <= 6 ? "3.5rem" : "2rem";
                 return (
                   <span
                     key={`${e}-${i}`}
