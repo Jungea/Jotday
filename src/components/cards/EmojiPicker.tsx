@@ -10,12 +10,12 @@ const MAX_RECENT = 32;
 function getRecent(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
 }
-export function saveRecent(value: string) {
+export async function saveRecent(value: string) {
   if (!value.trim()) return;
   const prev = getRecent().filter((e) => e !== value.trim());
   const next = [value.trim(), ...prev].slice(0, MAX_RECENT);
   localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-  fetch("/api/settings", {
+  await fetch("/api/settings", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ recent_emojis: next }),

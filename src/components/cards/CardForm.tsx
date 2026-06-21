@@ -61,7 +61,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
     setError(null);
     setUploadError(null);
     setLoading(true);
-    if (visualText.trim()) saveRecent(visualText.trim());
+    if (visualText.trim()) await saveRecent(visualText.trim());
 
     if (isEdit) {
       const formData = new FormData();
