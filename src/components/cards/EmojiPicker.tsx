@@ -38,7 +38,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="텍스트 또는 이모티콘 입력..."
+          placeholder="카드에 표시할 텍스트..."
           className={`flex-1 text-sm bg-transparent outline-none ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
         />
         {value && (
@@ -56,7 +56,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
       <div>
         <div className="flex items-center justify-between px-3 pt-2 pb-1">
           <p className={`text-xs ${isDark ? "text-gray-600" : "text-gray-400"}`}>
-            {recent.length > 0 ? "최근 사용" : "아직 사용한 항목이 없어요"}
+            {recent.length > 0 ? "최근 사용" : "최근 사용 내역이 없어요"}
           </p>
           {recent.length > 0 && (
             <button
