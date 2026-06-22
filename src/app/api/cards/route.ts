@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   getAllTags, searchCards, getFeedCards, getCardsByDate, getMonthMeta,
+  getMemoryCards,
   createCard, copyCard,
   moveCardDate, setRepresentative, unsetRepresentative, updateCard,
   deleteCard,
@@ -54,6 +55,14 @@ export async function GET(request: NextRequest) {
   try {
     if (searchParams.get("alltags") === "true")
       return NextResponse.json(await getAllTags(supabase, user.id));
+
+    if (searchParams.get("memories") === "true") {
+      const datesParam = searchParams.get("dates");
+      if (!datesParam) return NextResponse.json({ error: "Missing dates" }, { status: 400 });
+      const dates = datesParam.split(",").filter((d) => DATE_RE.test(d));
+      if (dates.length === 0 || dates.length > 12) return NextResponse.json({ error: "잘못된 날짜 형식입니다" }, { status: 400 });
+      return NextResponse.json(await getMemoryCards(supabase, user.id, dates));
+    }
 
     if (searchParams.get("q") !== null || searchParams.get("tags") !== null) {
       const q = searchParams.get("q");

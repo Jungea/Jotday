@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LayoutList, Search, Settings } from "lucide-react";
+import { CalendarDays, LayoutList, Search, Settings, Sparkles } from "lucide-react";
 import { useThemeStore } from "@/store/theme";
 import { useUIStore } from "@/store/ui";
 
 const TABS = [
-  { href: "/",         icon: CalendarDays, label: "달력" },
-  { href: "/feed",     icon: LayoutList,   label: "피드" },
-  { href: "/search",   icon: Search,       label: "검색" },
-  { href: "/settings", icon: Settings,     label: "설정" },
+  { href: "/",          icon: CalendarDays, label: "달력" },
+  { href: "/feed",      icon: LayoutList,   label: "피드" },
+  { href: "/memories",  icon: Sparkles,     label: "추억" },
+  { href: "/search",    icon: Search,       label: "검색" },
+  { href: "/settings",  icon: Settings,     label: "설정" },
 ];
 
 export function BottomTabBar() {

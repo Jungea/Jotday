@@ -54,6 +54,22 @@ export async function getFeedCards(db: DB, userId: string, opts: {
   return { cards, hasMore: cards.length === limit };
 }
 
+export async function getMemoryCards(db: DB, userId: string, dates: string[]): Promise<Record<string, Card[]>> {
+  const { data, error } = await db
+    .from("cards")
+    .select("*")
+    .eq("user_id", userId)
+    .in("date", dates)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  const result: Record<string, Card[]> = {};
+  for (const card of (data ?? []) as Card[]) {
+    if (!result[card.date]) result[card.date] = [];
+    result[card.date].push(card);
+  }
+  return result;
+}
+
 export async function getCardsByDate(db: DB, userId: string, date: string, ascending: boolean): Promise<Card[]> {
   const { data, error } = await db
     .from("cards")
