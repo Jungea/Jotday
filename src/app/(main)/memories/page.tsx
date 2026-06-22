@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
-import { format, subWeeks, subMonths, subYears } from "date-fns";
+import { format, subMonths, subYears } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { CardItem } from "@/components/cards/CardItem";
@@ -15,8 +15,6 @@ import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
 
 const PERIODS = [
-  { label: "1주 전 오늘",  fn: (d: Date) => subWeeks(d, 1) },
-  { label: "2주 전 오늘",  fn: (d: Date) => subWeeks(d, 2) },
   { label: "1달 전 오늘",  fn: (d: Date) => subMonths(d, 1) },
   { label: "3달 전 오늘",  fn: (d: Date) => subMonths(d, 3) },
   { label: "6달 전 오늘",  fn: (d: Date) => subMonths(d, 6) },
