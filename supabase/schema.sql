@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   share_settings JSONB,
   recent_emojis TEXT[] DEFAULT '{}',
   calendar_tags TEXT[] DEFAULT '{}',
+  calendar_selected_tag TEXT DEFAULT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

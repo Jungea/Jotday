@@ -31,7 +31,8 @@ function HomeContent() {
   const [loading, setLoading] = useState(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const calendarTags = useCalendarTagsStore((s) => s.calendarTags);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const selectedTag = useCalendarTagsStore((s) => s.selectedTag);
+  const setSelectedTag = useCalendarTagsStore((s) => s.setSelectedTag);
   const [tagDayMetas, setTagDayMetas] = useState<DayMeta[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showQuickCamera, setShowQuickCamera] = useState(false);

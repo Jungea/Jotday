@@ -20,7 +20,7 @@ export function SettingsSync() {
       const { order, pinned } = useCardActionsStore.getState();
       const { presets } = useFeedPresetsStore.getState();
       const { expiryDays, daySort } = useShareSettingsStore.getState();
-      const { calendarTags } = useCalendarTagsStore.getState();
+      const { calendarTags, selectedTag } = useCalendarTagsStore.getState();
       fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -30,6 +30,7 @@ export function SettingsSync() {
           feed_presets: { presets },
           share_settings: { expiryDays, daySort },
           calendar_tags: calendarTags,
+          calendar_selected_tag: selectedTag,
         }),
       });
     }, 500);
@@ -68,6 +69,8 @@ export function SettingsSync() {
             useRecentEmojisStore.getState().setItems(data.recent_emojis);
           if (Array.isArray(data.calendar_tags))
             useCalendarTagsStore.getState().setCalendarTags(data.calendar_tags);
+          if ("calendar_selected_tag" in data)
+            useCalendarTagsStore.getState().setSelectedTag(data.calendar_selected_tag ?? null);
         }
       })
       .finally(() => {
