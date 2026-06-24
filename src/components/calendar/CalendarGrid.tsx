@@ -29,9 +29,13 @@ interface CalendarGridProps {
   onMonthChange?: (month: string) => void;
   initialMonth?: string;
   onDataChange?: () => void;
+  availableTags?: string[];
+  selectedTag?: string | null;
+  onTagSelect?: (tag: string | null) => void;
+  tagDayMetas?: DayMeta[];
 }
 
-export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChange }: CalendarGridProps) {
+export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChange, availableTags, selectedTag, onTagSelect, tagDayMetas }: CalendarGridProps) {
   const [current, setCurrent] = useState(() =>
     initialMonth ? parse(initialMonth, "yyyy-MM", new Date()) : new Date()
   );
@@ -79,6 +83,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
   const isDark = theme === "dark";
 
   const metaMap = new Map(dayMetas.map((m) => [m.date, m]));
+  const tagMetaMap = new Map((tagDayMetas ?? []).map((m) => [m.date, m]));
 
   const monthStart = startOfMonth(current);
   const monthEnd = endOfMonth(current);
@@ -163,21 +168,45 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
         ))}
       </div>
 
+      {/* 태그 필터 칩 */}
+      {availableTags && availableTags.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-2 mb-2 scrollbar-none">
+          {availableTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => onTagSelect?.(selectedTag === tag ? null : tag)}
+              className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors
+                ${selectedTag === tag
+                  ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
+                  : isDark ? "bg-gray-800 text-gray-400 hover:bg-gray-700" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                }`}
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Days grid */}
       <div className="grid grid-cols-7 gap-1">
-        {prevDays.map((day) => (
-          <GhostDayCell
-            key={`prev-${format(day, "yyyy-MM-dd")}`}
-            day={day}
-            meta={metaMap.get(format(day, "yyyy-MM-dd"))}
-            isDark={isDark}
-            onClick={() => {
-              const prev = subMonths(current, 1);
-              setCurrent(prev);
-              onMonthChange?.(format(prev, "yyyy-MM"));
-            }}
-          />
-        ))}
+        {prevDays.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          return (
+            <GhostDayCell
+              key={`prev-${key}`}
+              day={day}
+              meta={metaMap.get(key)}
+              isDark={isDark}
+              onClick={() => {
+                const prev = subMonths(current, 1);
+                setCurrent(prev);
+                onMonthChange?.(format(prev, "yyyy-MM"));
+              }}
+              tagMeta={selectedTag ? tagMetaMap.get(key) : undefined}
+              tagActive={!!selectedTag}
+            />
+          );
+        })}
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const meta = metaMap.get(key);
@@ -194,22 +223,29 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
               dow={dow}
               isDark={isDark}
               onClick={() => handleDayClick(day)}
+              tagMeta={selectedTag ? tagMetaMap.get(key) : undefined}
+              tagActive={!!selectedTag}
             />
           );
         })}
-        {nextDays.map((day) => (
-          <GhostDayCell
-            key={`next-${format(day, "yyyy-MM-dd")}`}
-            day={day}
-            meta={metaMap.get(format(day, "yyyy-MM-dd"))}
-            isDark={isDark}
-            onClick={() => {
-              const next = addMonths(current, 1);
-              setCurrent(next);
-              onMonthChange?.(format(next, "yyyy-MM"));
-            }}
-          />
-        ))}
+        {nextDays.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          return (
+            <GhostDayCell
+              key={`next-${key}`}
+              day={day}
+              meta={metaMap.get(key)}
+              isDark={isDark}
+              onClick={() => {
+                const next = addMonths(current, 1);
+                setCurrent(next);
+                onMonthChange?.(format(next, "yyyy-MM"));
+              }}
+              tagMeta={selectedTag ? tagMetaMap.get(key) : undefined}
+              tagActive={!!selectedTag}
+            />
+          );
+        })}
       </div>
 
       {/* 연도/월 빠른 점프 */}
@@ -295,6 +331,8 @@ function DayCell({
   dow,
   isDark,
   onClick,
+  tagMeta,
+  tagActive,
 }: {
   day: Date;
   meta?: DayMeta;
@@ -303,16 +341,28 @@ function DayCell({
   dow: number;
   isDark: boolean;
   onClick: () => void;
+  tagMeta?: DayMeta;
+  tagActive?: boolean;
 }) {
   const hasRecord = !!meta && meta.count > 0;
+  const hasTagRecord = !!tagMeta && tagMeta.count > 0;
   const dateNum = format(day, "d");
+
+  // 태그 필터 활성 시: 해당 태그 카드 썸네일 표시, 없으면 dim
+  const displayImage = tagActive
+    ? (hasTagRecord ? tagMeta!.preview_image : null)
+    : meta?.preview_image ?? null;
+  const displayEmoji = tagActive
+    ? (hasTagRecord && !tagMeta!.preview_image ? tagMeta!.preview_emoji : null)
+    : (!meta?.preview_image ? meta?.preview_emoji ?? null : null);
+  const dimmed = tagActive && !hasTagRecord;
 
   return (
     <button
       onClick={onClick}
       className={`
         relative aspect-square rounded-md transition-all
-        ${hasRecord && meta?.preview_image
+        ${hasRecord && displayImage
           ? isDark
             ? "bg-[#1c1c1c] shadow-sm border border-gray-800 hover:border-gray-600"
             : "bg-white shadow-sm border border-gray-200 hover:border-gray-300"
@@ -321,19 +371,20 @@ function DayCell({
             : "hover:bg-gray-100"
         }
         ${isToday ? isDark ? "ring-2 ring-white" : "ring-2 ring-gray-900" : ""}
+        ${dimmed ? "opacity-30" : ""}
       `}
     >
-      {hasRecord && meta?.preview_image && (
+      {displayImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={meta.preview_image}
+          src={displayImage}
           alt=""
           className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65"
         />
       )}
-      {hasRecord && !meta?.preview_image && meta?.preview_emoji && (
+      {!displayImage && displayEmoji && (
         <div className={`absolute inset-0 flex items-center justify-center rounded-md ${isDark ? "bg-[#1a2535]" : "bg-gray-100"}`}>
-          <span className="text-2xl leading-none">{meta.preview_emoji}</span>
+          <span className="text-2xl leading-none">{displayEmoji}</span>
         </div>
       )}
 
@@ -374,29 +425,39 @@ function DayCell({
   );
 }
 
-function GhostDayCell({ day, meta, isDark, onClick }: { day: Date; meta?: DayMeta; isDark: boolean; onClick: () => void }) {
+function GhostDayCell({ day, meta, isDark, onClick, tagMeta, tagActive }: { day: Date; meta?: DayMeta; isDark: boolean; onClick: () => void; tagMeta?: DayMeta; tagActive?: boolean }) {
   const dow = getDay(day);
   const hasRecord = !!meta && meta.count > 0;
+  const hasTagRecord = !!tagMeta && tagMeta.count > 0;
+
+  const displayImage = tagActive
+    ? (hasTagRecord ? tagMeta!.preview_image : null)
+    : meta?.preview_image ?? null;
+  const displayEmoji = tagActive
+    ? (hasTagRecord && !tagMeta!.preview_image ? tagMeta!.preview_emoji : null)
+    : (!meta?.preview_image ? meta?.preview_emoji ?? null : null);
+  const dimmed = tagActive && !hasTagRecord;
+
   return (
     <button
       onClick={onClick}
       className={`relative aspect-square rounded-md transition-all opacity-50 ${
-        hasRecord
+        hasRecord && displayImage
           ? isDark
             ? "bg-[#1c1c1c] border border-gray-800"
             : "bg-white border border-gray-200"
           : isDark
             ? "hover:bg-gray-800/50"
             : "hover:bg-gray-100"
-      }`}
+      } ${dimmed ? "!opacity-15" : ""}`}
     >
-      {hasRecord && meta?.preview_image && (
+      {displayImage && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={meta.preview_image} alt="" className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65" />
+        <img src={displayImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65" />
       )}
-      {hasRecord && !meta?.preview_image && meta?.preview_emoji && (
+      {!displayImage && displayEmoji && (
         <div className={`absolute inset-0 flex items-center justify-center rounded-md ${isDark ? "bg-[#1a2535]" : "bg-gray-100"}`}>
-          <span className="text-2xl leading-none">{meta.preview_emoji}</span>
+          <span className="text-2xl leading-none">{displayEmoji}</span>
         </div>
       )}
       <span className={`absolute z-10 text-xs font-medium

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, Eye, EyeOff, GripVertical, Link, LogOut } from "lucide-react";
+import { Check, Eye, EyeOff, GripVertical, Link, LogOut, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useCardActionsStore, ACTION_LABELS } from "@/store/cardActions";
 import type { ActionId } from "@/store/cardActions";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
@@ -25,6 +26,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useThemeStore } from "@/store/theme";
 import { useFeedPresetsStore } from "@/store/feedPresets";
 import { useShareSettingsStore } from "@/store/shareSettings";
+import { useCalendarTagsStore } from "@/store/calendarTags";
 import type { Theme } from "@/types";
 import type { PresetItem, BuiltinKey } from "@/store/feedPresets";
 
@@ -101,8 +103,30 @@ export default function SettingsPage() {
   const { presets, reorder, toggleHidden } = useFeedPresetsStore();
   const { order, pinned, toggle, reorder: reorderActions } = useCardActionsStore();
   const { daySort, setDaySort } = useShareSettingsStore();
+  const { calendarTags, addTag, removeTag } = useCalendarTagsStore();
   const isDark = theme === "dark";
   const { showHeader, onScroll } = useScrollHeader();
+
+  const [tagInput, setTagInput] = useState("");
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/cards?alltags=true").then((r) => r.ok ? r.json() : []).then(setAllTags);
+  }, []);
+
+  const suggestions = tagInput.trim()
+    ? allTags.filter((t) => t.includes(tagInput.trim().toLowerCase()) && !calendarTags.includes(t))
+    : allTags.filter((t) => !calendarTags.includes(t));
+
+  function handleAddTag(tag: string) {
+    const cleaned = tag.replace(/^#/, "").trim().toLowerCase();
+    if (!cleaned) return;
+    addTag(cleaned);
+    setTagInput("");
+    setShowSuggestions(false);
+  }
 
   async function handleLogout() {
     const supabase = createClient();
@@ -189,6 +213,68 @@ export default function SettingsPage() {
                 {opt.label}
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* 달력 태그 필터 */}
+        <section>
+          <h2 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${sub}`}>달력 태그 필터</h2>
+          <p className={`text-xs mb-3 ${sub}`}>달력에서 빠르게 선택할 태그를 지정해요.</p>
+
+          {/* 추가된 태그 */}
+          {calendarTags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {calendarTags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium
+                    ${isDark ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-700"}`}
+                >
+                  #{tag}
+                  <button
+                    onClick={() => removeTag(tag)}
+                    className={`rounded-full p-0.5 transition-colors ${isDark ? "hover:bg-gray-700 text-gray-400" : "hover:bg-gray-200 text-gray-400"}`}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* 태그 입력 */}
+          <div className="relative">
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl ${isDark ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
+              <span className={`text-sm ${isDark ? "text-gray-500" : "text-gray-400"}`}>#</span>
+              <input
+                ref={tagInputRef}
+                value={tagInput}
+                onChange={(e) => { setTagInput(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); handleAddTag(tagInput); }
+                }}
+                placeholder="태그 추가"
+                className={`flex-1 text-sm bg-transparent outline-none placeholder:${isDark ? "text-gray-600" : "text-gray-400"} ${isDark ? "text-white" : "text-gray-900"}`}
+              />
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <div className={`absolute top-full left-0 right-0 mt-1 rounded-xl shadow-lg z-10 overflow-hidden max-h-40 overflow-y-auto
+                ${isDark ? "bg-[#2a2a2a] border border-gray-700" : "bg-white border border-gray-200"}`}>
+                {suggestions.map((tag) => (
+                  <button
+                    key={tag}
+                    onMouseDown={() => handleAddTag(tag)}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors
+                      ${isDark ? "text-gray-300 hover:bg-gray-700" : "text-gray-700 hover:bg-gray-50"}`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

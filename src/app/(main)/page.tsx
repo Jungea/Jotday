@@ -12,6 +12,7 @@ import { useToastStore } from "@/store/toast";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
+import { useCalendarTagsStore } from "@/store/calendarTags";
 import type { DayMeta } from "@/types";
 
 function HomeContent() {
@@ -29,6 +30,9 @@ function HomeContent() {
   /* eslint-enable react-hooks/set-state-in-effect */
   const [loading, setLoading] = useState(true);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const calendarTags = useCalendarTagsStore((s) => s.calendarTags);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [tagDayMetas, setTagDayMetas] = useState<DayMeta[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [showQuickCamera, setShowQuickCamera] = useState(false);
   const [quickCropSrc, setQuickCropSrc] = useState<string | null>(null);
@@ -51,11 +55,28 @@ function HomeContent() {
     setInitialLoaded(true);
   }, []);
 
+  const fetchTagMetas = useCallback(async (month: string, tag: string) => {
+    const base = parse(month, "yyyy-MM", new Date());
+    const months = [
+      format(subMonths(base, 1), "yyyy-MM"),
+      month,
+      format(addMonths(base, 1), "yyyy-MM"),
+    ];
+    const results = await Promise.all(months.map((m) => fetch(`/api/cards?month=${m}&tag=${encodeURIComponent(tag)}`).then((r) => r.ok ? r.json() : [])));
+    setTagDayMetas(results.flat());
+  }, []);
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     fetchMetas(currentMonth);
   }, [currentMonth, fetchMetas]);
+
+  useEffect(() => {
+    if (selectedTag) fetchTagMetas(currentMonth, selectedTag);
+    else setTagDayMetas([]);
+  }, [currentMonth, selectedTag, fetchTagMetas]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
 
   const isDark = theme === "dark";
 
@@ -105,7 +126,16 @@ function HomeContent() {
           </div>
         ) : (
           <>
-            <CalendarGrid dayMetas={dayMetas} onMonthChange={setCurrentMonth} initialMonth={currentMonth} onDataChange={() => fetchMetas(currentMonth)} />
+            <CalendarGrid
+            dayMetas={dayMetas}
+            onMonthChange={setCurrentMonth}
+            initialMonth={currentMonth}
+            onDataChange={() => fetchMetas(currentMonth)}
+            availableTags={calendarTags}
+            selectedTag={selectedTag}
+            onTagSelect={setSelectedTag}
+            tagDayMetas={tagDayMetas}
+          />
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin ${isDark ? "border-gray-600" : "border-gray-300"}`} />

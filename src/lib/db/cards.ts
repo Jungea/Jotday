@@ -117,6 +117,22 @@ export async function getMonthMeta(db: DB, userId: string, month: string): Promi
   return aggregateMonthMeta(data ?? []);
 }
 
+export async function getMonthMetaByTag(db: DB, userId: string, month: string, tag: string): Promise<DayMeta[]> {
+  const start = `${month}-01`;
+  const [year, mon] = month.split("-").map(Number);
+  const end = `${year}-${String(mon === 12 ? 1 : mon + 1).padStart(2, "0")}-01`;
+  const { data, error } = await db
+    .from("cards")
+    .select("date, image_url, emojis, is_representative")
+    .eq("user_id", userId)
+    .gte("date", start)
+    .lt("date", end)
+    .contains("tags", [tag])
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return aggregateMonthMeta(data ?? []);
+}
+
 // ── POST ─────────────────────────────────────────────────────────────────────
 
 export async function createCard(db: DB, userId: string, opts: {

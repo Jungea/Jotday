@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getAllTags, searchCards, getFeedCards, getCardsByDate, getMonthMeta,
+  getAllTags, searchCards, getFeedCards, getCardsByDate, getMonthMeta, getMonthMetaByTag,
   getMemoryCards,
   createCard, copyCard,
   moveCardDate, setRepresentative, unsetRepresentative, updateCard,
@@ -97,6 +97,11 @@ export async function GET(request: NextRequest) {
 
     if (month) {
       if (!MONTH_RE.test(month)) return NextResponse.json({ error: "잘못된 월 형식입니다" }, { status: 400 });
+      const tag = searchParams.get("tag");
+      if (tag) {
+        if (tag.length > 50) return NextResponse.json({ error: "태그가 너무 깁니다" }, { status: 400 });
+        return NextResponse.json(await getMonthMetaByTag(supabase, user.id, month, tag));
+      }
       return NextResponse.json(await getMonthMeta(supabase, user.id, month));
     }
 

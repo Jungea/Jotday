@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS user_settings (
   feed_presets JSONB,
   share_settings JSONB,
   recent_emojis TEXT[] DEFAULT '{}',
+  calendar_tags TEXT[] DEFAULT '{}',
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -8,7 +8,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("user_settings")
-    .select("theme, card_actions, feed_presets, share_settings, recent_emojis")
+    .select("theme, card_actions, feed_presets, share_settings, recent_emojis, calendar_tags")
     .eq("user_id", user.id)
     .single();
 
@@ -37,6 +37,7 @@ export async function PATCH(request: Request) {
   if (body.feed_presets !== undefined) updates.feed_presets = body.feed_presets;
   if (body.share_settings !== undefined) updates.share_settings = body.share_settings;
   if (Array.isArray(body.recent_emojis)) updates.recent_emojis = body.recent_emojis;
+  if (Array.isArray(body.calendar_tags)) updates.calendar_tags = body.calendar_tags;
 
   const { error } = await supabase
     .from("user_settings")

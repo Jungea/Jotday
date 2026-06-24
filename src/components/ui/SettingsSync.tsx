@@ -6,6 +6,7 @@ import { useCardActionsStore, DEFAULT_ORDER, type ActionId } from "@/store/cardA
 import { useFeedPresetsStore } from "@/store/feedPresets";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useRecentEmojisStore } from "@/store/recentEmojis";
+import { useCalendarTagsStore } from "@/store/calendarTags";
 
 export function SettingsSync() {
   const isSyncingRef = useRef(true);
@@ -19,6 +20,7 @@ export function SettingsSync() {
       const { order, pinned } = useCardActionsStore.getState();
       const { presets } = useFeedPresetsStore.getState();
       const { expiryDays, daySort } = useShareSettingsStore.getState();
+      const { calendarTags } = useCalendarTagsStore.getState();
       fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -27,6 +29,7 @@ export function SettingsSync() {
           card_actions: { order, pinned },
           feed_presets: { presets },
           share_settings: { expiryDays, daySort },
+          calendar_tags: calendarTags,
         }),
       });
     }, 500);
@@ -38,6 +41,7 @@ export function SettingsSync() {
       useCardActionsStore.subscribe(() => debouncedSave()),
       useFeedPresetsStore.subscribe(() => debouncedSave()),
       useShareSettingsStore.subscribe(() => debouncedSave()),
+      useCalendarTagsStore.subscribe(() => debouncedSave()),
     ];
 
     fetch("/api/settings")
@@ -62,6 +66,8 @@ export function SettingsSync() {
           }
           if (Array.isArray(data.recent_emojis) && data.recent_emojis.length > 0)
             useRecentEmojisStore.getState().setItems(data.recent_emojis);
+          if (Array.isArray(data.calendar_tags))
+            useCalendarTagsStore.getState().setCalendarTags(data.calendar_tags);
         }
       })
       .finally(() => {
