@@ -121,19 +121,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
 
   return (
     <>
-      {showCamera && (
-        <CameraModal onCapture={handleCameraCapture} onCancel={() => setShowCamera(false)} />
-      )}
-      {cropQueue[0] && (
-        <ImageCropModal
-          key={cropQueue[0]}
-          src={cropQueue[0]}
-          current={croppingSlotIndex !== null ? undefined : uploadedCount + 1}
-          total={croppingSlotIndex !== null ? undefined : uploadedCount + cropQueue.length}
-          onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
-        />
-      )}
       <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-modal">
         <div className={`${isDark ? "bg-[#1c1c1c]" : "bg-white"} rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md max-h-[85dvh] flex flex-col`}>
           <div className={`flex items-center justify-between px-5 pt-5 pb-3 border-b ${isDark ? "border-gray-800" : "border-gray-100"} shrink-0`}>
@@ -306,6 +293,19 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           </div>
         </div>
       </div>
+      {showCamera && (
+        <CameraModal onCapture={handleCameraCapture} onCancel={() => setShowCamera(false)} />
+      )}
+      {cropQueue[0] && (
+        <ImageCropModal
+          key={cropQueue[0]}
+          src={cropQueue[0]}
+          current={croppingSlotIndex !== null ? undefined : uploadedCount + 1}
+          total={croppingSlotIndex !== null ? undefined : uploadedCount + cropQueue.length}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </>
   );
 }
