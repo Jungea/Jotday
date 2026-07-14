@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 function touchDist(t: TouchList) {
   return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
@@ -293,7 +294,7 @@ export function ImageSwiper({ images, disableLightbox }: { images: { url: string
           className="w-full h-auto cursor-pointer"
           onClick={disableLightbox ? undefined : () => setLightboxIndex(0)}
         />
-        {lightboxIndex !== null && <Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
+        {lightboxIndex !== null && createPortal(<Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />, document.body)}
       </>
     );
   }
@@ -342,7 +343,7 @@ export function ImageSwiper({ images, disableLightbox }: { images: { url: string
           </div>
         </div>
       </div>
-      {lightboxIndex !== null && <Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
+      {lightboxIndex !== null && createPortal(<Lightbox images={images} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />, document.body)}
     </>
   );
 }
