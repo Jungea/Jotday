@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Link } from "lucide-react";
+import { ArrowLeft, Plus, Link, Clock } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
@@ -68,6 +68,20 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
     setTimeout(() => {
       document.getElementById(`card-${newCardId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 100);
+  }
+
+  async function handleTimestamp() {
+    try {
+      const fd = new FormData();
+      fd.append("date", date);
+      fd.append("type", "text");
+      fd.append("tags", JSON.stringify([]));
+      await fetch("/api/cards", { method: "POST", body: fd });
+      await fetchCards();
+      addToast("타임스탬프가 찍혔어요");
+    } catch {
+      addToast("저장에 실패했어요");
+    }
   }
 
   async function handleShareDate() {
@@ -153,13 +167,22 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       </main>
 
       {/* FAB */}
-      <button
-        onClick={() => setShowForm(true)}
-        className={`fixed bottom-20 right-6 z-fab w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
-          ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
-      >
-        <Plus size={22} />
-      </button>
+      <div className="fixed bottom-20 right-6 z-fab flex flex-col items-center gap-2">
+        <button
+          onClick={handleTimestamp}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
+            ${isDark ? "bg-gray-800 text-gray-200 hover:bg-gray-700" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"}`}
+        >
+          <Clock size={20} />
+        </button>
+        <button
+          onClick={() => setShowForm(true)}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
+            ${isDark ? "bg-white text-black hover:bg-gray-200" : "bg-gray-900 text-white hover:bg-gray-700"}`}
+        >
+          <Plus size={22} />
+        </button>
+      </div>
 
       {showForm && (
         <CardForm

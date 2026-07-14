@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { format, addMonths, subMonths, parse } from "date-fns";
-import { Plus, Camera } from "lucide-react";
+import { Plus, Camera, Clock } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { CardForm } from "@/components/cards/CardForm";
@@ -81,6 +81,20 @@ function HomeContent() {
 
   const isDark = theme === "dark";
 
+  async function handleTimestamp() {
+    try {
+      const fd = new FormData();
+      fd.append("date", today);
+      fd.append("type", "text");
+      fd.append("tags", JSON.stringify([]));
+      await fetch("/api/cards", { method: "POST", body: fd });
+      fetchMetas(currentMonth);
+      addToast("타임스탬프가 찍혔어요");
+    } catch {
+      addToast("저장에 실패했어요");
+    }
+  }
+
   function handleQuickCapture(file: File) {
     setShowQuickCamera(false);
     setQuickCropSrc(URL.createObjectURL(file));
@@ -154,6 +168,13 @@ function HomeContent() {
             ${isDark ? "bg-gray-800 text-gray-200 hover:bg-gray-700" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"}`}
         >
           <Camera size={20} />
+        </button>
+        <button
+          onClick={handleTimestamp}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-colors
+            ${isDark ? "bg-gray-800 text-gray-200 hover:bg-gray-700" : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"}`}
+        >
+          <Clock size={20} />
         </button>
         <button
           onClick={() => setShowForm(true)}
