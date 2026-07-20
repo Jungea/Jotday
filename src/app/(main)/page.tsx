@@ -9,6 +9,7 @@ import { CardForm } from "@/components/cards/CardForm";
 import { CameraModal } from "@/components/cards/CameraModal";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { useToastStore } from "@/store/toast";
+import { useGlobalLoadingStore } from "@/store/globalLoading";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
 import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
@@ -41,6 +42,7 @@ function HomeContent() {
   const { showHeader, onScroll } = useScrollHeader();
   const theme = useThemeStore((s) => s.theme);
   const addToast = useToastStore((s) => s.addToast);
+  const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
 
   const fetchMetas = useCallback(async (month: string) => {
     setLoading(true);
@@ -103,6 +105,7 @@ function HomeContent() {
   function handleQuickCropConfirm(file: File) {
     if (quickCropSrc) URL.revokeObjectURL(quickCropSrc);
     setQuickCropSrc(null);
+    beginLoading();
     (async () => {
       try {
         const signRes = await fetch("/api/upload-sign");
@@ -125,6 +128,8 @@ function HomeContent() {
         addToast("사진이 저장됐어요");
       } catch {
         addToast("사진 저장에 실패했어요");
+      } finally {
+        endLoading();
       }
     })();
   }

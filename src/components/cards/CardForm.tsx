@@ -8,6 +8,8 @@ import { ImageCropModal } from "@/components/cards/ImageCropModal";
 import { CameraModal } from "@/components/cards/CameraModal";
 import { EmojiPicker, saveRecent } from "@/components/cards/EmojiPicker";
 import { useThemeStore } from "@/store/theme";
+import { useGlobalLoadingStore } from "@/store/globalLoading";
+import { useToastStore } from "@/store/toast";
 import { useTagAutocomplete } from "@/hooks/useTagAutocomplete";
 import { useImageSlots, cloudinaryResized } from "@/hooks/useImageSlots";
 import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
@@ -27,6 +29,8 @@ interface CardFormProps {
 
 export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps) {
   const isDark = useThemeStore((s) => s.theme === "dark");
+  const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
+  const addToast = useToastStore((s) => s.addToast);
   const isEdit = !!editCard;
 
   const [content, setContent] = useState(editCard?.content ?? "");
@@ -34,8 +38,6 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
   const [showEmojiPicker, setShowEmojiPicker] = useState(!!(editCard?.emojis?.[0]));
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
   const [manualTime, setManualTime] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -52,19 +54,18 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
 
   useModalHistoryBack(onCancel);
 
-  const busy = uploading || loading;
+  const busy = uploading;
   const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
-  const displayError = error ?? uploadError;
+  const displayError = uploadError;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
     setUploadError(null);
-    setLoading(true);
     if (visualText.trim()) await saveRecent(visualText.trim());
 
+    // formData를 미리 구성한 뒤 폼을 즉시 닫고 백그라운드에서 저장
+    const formData = new FormData();
     if (isEdit) {
-      const formData = new FormData();
       formData.append("id", editCard.id);
       formData.append("type", "mixed");
       if (content) formData.append("content", content);
@@ -78,22 +79,12 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
       ).join(",");
       const doneSlots = slots.filter((s): s is Exclude<typeof s, { kind: "pending" }> => s.kind !== "pending");
       const currentIds = doneSlots.map((s) => s.publicId).join(",");
-
       if (originalIds !== currentIds) {
         formData.append("images", JSON.stringify(
           doneSlots.map((s) => ({ url: s.url, public_id: s.publicId }))
         ));
       }
-
-      const res = await fetch("/api/cards", { method: "PATCH", body: formData });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "수정 실패");
-        setLoading(false);
-        return;
-      }
     } else {
-      const formData = new FormData();
       formData.append("date", date);
       formData.append("type", "mixed");
       if (content) formData.append("content", content);
@@ -105,18 +96,26 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           .filter((s): s is Exclude<typeof s, { kind: "pending" }> => s.kind !== "pending")
           .map((s) => ({ url: s.url, public_id: s.publicId }))
       ));
-
-      const res = await fetch("/api/cards", { method: "POST", body: formData });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "저장 실패");
-        setLoading(false);
-        return;
-      }
     }
 
-    setLoading(false);
-    onSuccess();
+    beginLoading();
+    onSuccess(); // 폼을 즉시 닫음
+
+    // 백그라운드에서 API 호출
+    (async () => {
+      try {
+        const method = isEdit ? "PATCH" : "POST";
+        const res = await fetch("/api/cards", { method, body: formData });
+        if (!res.ok) {
+          const data = await res.json();
+          addToast(data.error ?? (isEdit ? "수정 실패" : "저장 실패"));
+        } else {
+          addToast(isEdit ? "카드가 수정됐어요" : "카드가 저장됐어요");
+        }
+      } finally {
+        endLoading();
+      }
+    })();
   }
 
   return (
@@ -206,26 +205,26 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={busy}
                   onClick={() => fileRef.current?.click()}
-                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${loading ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`flex-1 h-14 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Upload size={16} />
                   <span className="text-sm">{slots.length > 0 ? "이미지 추가" : "업로드"}</span>
                 </button>
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={busy}
                   onClick={() => setShowCamera(true)}
-                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${loading ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`h-14 px-5 border-2 border-dashed rounded-lg flex items-center justify-center gap-2 transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Camera size={16} />
                 </button>
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={busy}
                   onClick={() => setShowEmojiPicker((v) => !v)}
-                  className={`h-14 px-4 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors ${loading ? "opacity-40 cursor-not-allowed" : ""} ${showEmojiPicker || visualText ? isDark ? "border-gray-500 text-white" : "border-gray-500 text-gray-800" : isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
+                  className={`h-14 px-4 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors ${busy ? "opacity-40 cursor-not-allowed" : ""} ${showEmojiPicker || visualText ? isDark ? "border-gray-500 text-white" : "border-gray-500 text-gray-800" : isDark ? "border-gray-700 text-gray-500 hover:border-gray-500 hover:text-gray-300" : "border-gray-200 text-gray-400 hover:border-gray-400 hover:text-gray-600"}`}
                 >
                   <Type size={16} />
                 </button>
@@ -284,9 +283,7 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
               취소
             </Button>
             <Button type="submit" form="card-form" className="flex-1" disabled={busy}>
-              {loading
-                ? (isEdit ? "수정 중..." : "저장 중...")
-                : uploading
+              {uploading
                 ? "업로드 중..."
                 : (isEdit ? "수정" : uploadedCount > 1 ? `저장 (${uploadedCount})` : "저장")}
             </Button>
