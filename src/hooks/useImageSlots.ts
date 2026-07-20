@@ -121,7 +121,7 @@ export function useImageSlots(editCard?: Card) {
     };
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => el.removeEventListener("touchmove", onTouchMove);
-  }, []);
+  }, [slots.length]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
