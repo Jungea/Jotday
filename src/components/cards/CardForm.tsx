@@ -99,6 +99,21 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
       ));
     }
 
+    // 수정 시 낙관적 업데이트: API 전에 즉시 교체
+    if (isEdit && onSaved) {
+      const doneSlots = slots.filter((s): s is Exclude<typeof s, { kind: "pending" }> => s.kind !== "pending");
+      const optimistic: Card = {
+        ...editCard,
+        content: content || null,
+        tags: extractTags(content),
+        emojis: visualText.trim() ? [visualText.trim()] : [],
+        images: doneSlots.map((s) => ({ url: s.url, public_id: s.publicId })),
+        created_at: new Date(`${date}T${time}:00`).toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      onSaved(optimistic);
+    }
+
     beginLoading();
     onSuccess(); // 폼을 즉시 닫음
 
@@ -112,7 +127,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
           addToast(data.error ?? (isEdit ? "수정 실패" : "저장 실패"));
         } else {
           const card: Card = await res.json();
-          onSaved?.(card);
+          onSaved?.(card); // 서버 응답으로 최종 교체
           addToast(isEdit ? "카드가 수정됐어요" : "카드가 저장됐어요");
         }
       } finally {

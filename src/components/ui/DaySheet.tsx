@@ -9,7 +9,6 @@ import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useToastStore } from "@/store/toast";
-import { useGlobalLoadingStore } from "@/store/globalLoading";
 import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
 import type { Card } from "@/types";
 
@@ -61,7 +60,6 @@ export function DaySheet({
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
   const daySort = useShareSettingsStore((s) => s.daySort);
   const addToast = useToastStore((s) => s.addToast);
-  const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
   useModalHistoryBack(onClose);
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -105,17 +103,10 @@ export function DaySheet({
     }
   }
 
-  async function handleDelete(id: string) {
+  function handleDelete(id: string) {
     setCards((prev) => prev.filter((c) => c.id !== id));
     onCardDeleted?.(id);
-    beginLoading();
-    try {
-      const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
-      addToast(res.ok ? "카드가 삭제됐어요" : "삭제에 실패했어요");
-      if (res.ok) onDataChange?.();
-    } finally {
-      endLoading();
-    }
+    onDataChange?.();
   }
 
   function handleMove(id: string) {
@@ -123,19 +114,19 @@ export function DaySheet({
     onDataChange?.();
   }
 
-  async function handleSetRepresentative(id: string) {
-    const isCurrentlyRep = cards.find((c) => c.id === id)?.is_representative;
-    const fd = new FormData();
-    fd.append("id", id);
-    fd.append(isCurrentlyRep ? "unset_representative" : "set_representative", "true");
-    const res = await fetch("/api/cards", { method: "PATCH", body: fd });
-    if (res.ok) {
-      setCards((prev) => {
-        if (isCurrentlyRep) return prev.map((c) => c.id === id ? { ...c, is_representative: false } : c);
-        return prev.map((c) => ({ ...c, is_representative: c.id === id }));
-      });
-      onDataChange?.();
-    }
+  function handleSetRepresentative(id: string) {
+    setCards((prev) => {
+      const isCurrentlyRep = prev.find((c) => c.id === id)?.is_representative;
+      if (isCurrentlyRep) return prev.map((c) => c.id === id ? { ...c, is_representative: false } : c);
+      return prev.map((c) => ({ ...c, is_representative: c.id === id }));
+    });
+    onDataChange?.();
+  }
+
+  async function handleCopy(newCardId: string) {
+    const data: Card[] = await fetch(`/api/cards?date=${date}&sort=${daySort}`).then((r) => r.ok ? r.json() : cards);
+    setCards(data);
+    setTimeout(() => document.getElementById(`day-sheet-${newCardId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
   }
 
   async function handleShareDate() {
@@ -218,6 +209,7 @@ export function DaySheet({
                         isDark={isDark}
                         onDelete={handleDelete}
                         onEdit={setEditCard}
+                        onCopy={handleCopy}
                         onMove={handleMove}
                         onSetRepresentative={handleSetRepresentative}
                         barGradient={cardBarGradient(from, to)}
