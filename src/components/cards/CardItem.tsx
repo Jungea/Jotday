@@ -9,6 +9,7 @@ import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useCardActionsStore } from "@/store/cardActions";
 import { useToastStore } from "@/store/toast";
+import { useGlobalLoadingStore } from "@/store/globalLoading";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ImageSwiper } from "@/components/cards/ImageSwiper";
 import { downloadCard, downloadAllCards } from "@/lib/download";
@@ -198,6 +199,7 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   const { expiryDays } = useShareSettingsStore();
   const { order, pinned } = useCardActionsStore();
   const addToast = useToastStore((s) => s.addToast);
+  const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
   const p = (id: string) => pinned.includes(id as never);
   const timeLabel = format(new Date(card.created_at), "HH:mm");
 
@@ -318,8 +320,13 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   async function handleDeleteConfirm() {
     setShowDeleteConfirm(false);
     onDelete?.(card.id);
-    const res = await fetch(`/api/cards?id=${card.id}`, { method: "DELETE" });
-    addToast(res.ok ? "카드가 삭제됐어요" : "삭제에 실패했어요");
+    beginLoading();
+    try {
+      const res = await fetch(`/api/cards?id=${card.id}`, { method: "DELETE" });
+      addToast(res.ok ? "카드가 삭제됐어요" : "삭제에 실패했어요");
+    } finally {
+      endLoading();
+    }
   }
 
   const actionState: ActionState = { sharing, copying, starring, deleting, moving, linked, isRep };

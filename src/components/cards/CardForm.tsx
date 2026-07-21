@@ -24,10 +24,11 @@ interface CardFormProps {
   date: string;
   editCard?: Card;
   onSuccess: () => void;
+  onSaved?: (card: Card) => void;
   onCancel: () => void;
 }
 
-export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps) {
+export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardFormProps) {
   const isDark = useThemeStore((s) => s.theme === "dark");
   const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
   const addToast = useToastStore((s) => s.addToast);
@@ -110,6 +111,8 @@ export function CardForm({ date, editCard, onSuccess, onCancel }: CardFormProps)
           const data = await res.json();
           addToast(data.error ?? (isEdit ? "수정 실패" : "저장 실패"));
         } else {
+          const card: Card = await res.json();
+          onSaved?.(card);
           addToast(isEdit ? "카드가 수정됐어요" : "카드가 저장됐어요");
         }
       } finally {

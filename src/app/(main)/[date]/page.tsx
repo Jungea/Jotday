@@ -11,11 +11,22 @@ import { CardForm } from "@/components/cards/CardForm";
 import { useThemeStore } from "@/store/theme";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useToastStore } from "@/store/toast";
+import { useGlobalLoadingStore } from "@/store/globalLoading";
 import type { Card } from "@/types";
 
 function toHour(dateStr: string) {
   const d = new Date(dateStr);
   return d.getHours() + d.getMinutes() / 60;
+}
+
+function insertSorted(prev: Card[], card: Card, desc: boolean): Card[] {
+  const t = new Date(card.created_at).getTime();
+  const idx = prev.findIndex((c) => {
+    const ct = new Date(c.created_at).getTime();
+    return desc ? ct < t : ct > t;
+  });
+  if (idx === -1) return [...prev, card];
+  return [...prev.slice(0, idx), card, ...prev.slice(idx)];
 }
 
 export default function DayPage({ params }: { params: Promise<{ date: string }> }) {
@@ -28,6 +39,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const theme = useThemeStore((s) => s.theme);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
   const addToast = useToastStore((s) => s.addToast);
+  const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
   const daySort = useShareSettingsStore((s) => s.daySort);
 
   const fetchCards = useCallback(async () => {
@@ -71,16 +83,25 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   }
 
   async function handleTimestamp() {
+    beginLoading();
     try {
       const fd = new FormData();
       fd.append("date", date);
       fd.append("type", "text");
       fd.append("tags", JSON.stringify([]));
-      await fetch("/api/cards", { method: "POST", body: fd });
-      await fetchCards();
-      addToast("타임스탬프가 찍혔어요");
+      const res = await fetch("/api/cards", { method: "POST", body: fd });
+      if (res.ok) {
+        const card: Card = await res.json();
+        setCards((prev) => insertSorted(prev, card, daySort === "desc"));
+        setTimeout(() => document.getElementById(`card-${card.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+        addToast("타임스탬프가 찍혔어요");
+      } else {
+        addToast("저장에 실패했어요");
+      }
     } catch {
       addToast("저장에 실패했어요");
+    } finally {
+      endLoading();
     }
   }
 
@@ -157,7 +178,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
               const next = cards[i + 1];
               const to = next ? toHour(next.created_at) : from + 1;
               return (
-                <div key={card.id} className="w-full max-w-sm">
+                <div key={card.id} id={`card-${card.id}`} className="w-full max-w-sm">
                   <CardItem card={card} isDark={isDark} onDelete={handleRemoveCard} onEdit={setEditCard} onCopy={handleCopy} onMove={handleRemoveCard} onSetRepresentative={handleSetRepresentative} barGradient={cardBarGradient(from, to)} />
                 </div>
               );
@@ -187,10 +208,11 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
       {showForm && (
         <CardForm
           date={date}
-          onSuccess={async () => {
-            setShowForm(false);
-            await fetchCards();
-          }}
+          onSuccess={() => setShowForm(false)}
+          onSaved={(card) => {
+              setCards((prev) => insertSorted(prev, card, daySort === "desc"));
+              setTimeout(() => document.getElementById(`card-${card.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+            }}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -199,10 +221,8 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
         <CardForm
           date={date}
           editCard={editCard}
-          onSuccess={() => {
-            setEditCard(null);
-            fetchCards();
-          }}
+          onSuccess={() => setEditCard(null)}
+          onSaved={(card) => setCards((prev) => prev.map((c) => c.id === card.id ? card : c))}
           onCancel={() => setEditCard(null)}
         />
       )}
