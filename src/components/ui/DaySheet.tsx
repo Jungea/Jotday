@@ -9,8 +9,19 @@ import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useShareSettingsStore } from "@/store/shareSettings";
 import { useToastStore } from "@/store/toast";
+import { useGlobalLoadingStore } from "@/store/globalLoading";
 import { useModalHistoryBack } from "@/hooks/useModalHistoryBack";
 import type { Card } from "@/types";
+
+function insertSorted(prev: Card[], card: Card, desc: boolean): Card[] {
+  const t = new Date(card.created_at).getTime();
+  const idx = prev.findIndex((c) => {
+    const ct = new Date(c.created_at).getTime();
+    return desc ? ct < t : ct > t;
+  });
+  if (idx === -1) return [...prev, card];
+  return [...prev.slice(0, idx), card, ...prev.slice(idx)];
+}
 
 interface DaySheetProps {
   date: string;
@@ -48,14 +59,16 @@ export function DaySheet({
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [showForm, setShowForm] = useState(false);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
+  const daySort = useShareSettingsStore((s) => s.daySort);
   const addToast = useToastStore((s) => s.addToast);
+  const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
   useModalHistoryBack(onClose);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setLoading(true);
     setCards([]);
-    fetch(`/api/cards?date=${date}`)
+    fetch(`/api/cards?date=${date}&sort=${daySort}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data: Card[]) => { setCards(data); setLoading(false); });
   }, [date]);
@@ -93,11 +106,15 @@ export function DaySheet({
   }
 
   async function handleDelete(id: string) {
-    const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setCards((prev) => prev.filter((c) => c.id !== id));
-      onCardDeleted?.(id);
-      onDataChange?.();
+    setCards((prev) => prev.filter((c) => c.id !== id));
+    onCardDeleted?.(id);
+    beginLoading();
+    try {
+      const res = await fetch(`/api/cards?id=${id}`, { method: "DELETE" });
+      addToast(res.ok ? "카드가 삭제됐어요" : "삭제에 실패했어요");
+      if (res.ok) onDataChange?.();
+    } finally {
+      endLoading();
     }
   }
 
@@ -132,12 +149,6 @@ export function DaySheet({
     const url = `${window.location.origin}/share/${token}`;
     await navigator.clipboard.writeText(url);
     addToast("링크가 복사됐어요");
-  }
-
-  function refresh() {
-    fetch(`/api/cards?date=${date}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setCards);
   }
 
   const border = isDark ? "border-gray-800" : "border-gray-100";
@@ -222,7 +233,12 @@ export function DaySheet({
       {showForm && (
         <CardForm
           date={date}
-          onSuccess={() => { setShowForm(false); refresh(); onDataChange?.(); }}
+          onSuccess={() => setShowForm(false)}
+          onSaved={(card) => {
+            setCards((prev) => insertSorted(prev, card, daySort === "desc"));
+            setTimeout(() => document.getElementById(`day-sheet-${card.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+            onDataChange?.();
+          }}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -230,7 +246,11 @@ export function DaySheet({
         <CardForm
           date={editCard.date}
           editCard={editCard}
-          onSuccess={() => { setEditCard(null); refresh(); onDataChange?.(); }}
+          onSuccess={() => setEditCard(null)}
+          onSaved={(card) => {
+            setCards((prev) => prev.map((c) => c.id === card.id ? card : c));
+            onDataChange?.();
+          }}
           onCancel={() => setEditCard(null)}
         />
       )}
