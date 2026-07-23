@@ -8,6 +8,7 @@ import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
 import { cardBarGradient } from "@/lib/timeColor";
 import { DaySheet } from "@/components/ui/DaySheet";
+import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
 
@@ -39,7 +40,10 @@ function SearchContent() {
   const [modalScrollToId, setModalScrollToId] = useState<string | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const tagAreaRef = useRef<HTMLDivElement>(null);
   const didInitialSearch = useRef(false);
+  const { showHeader, onScroll: onScrollHeader } = useScrollHeader();
 
   useEffect(() => {
     fetch("/api/cards?alltags=true")
@@ -105,13 +109,32 @@ function SearchContent() {
     return () => { if (el) observer.unobserve(el); };
   }, [hasMore, loading, page, query, activeTags, fetchResults]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const scrollable = el.scrollHeight - el.clientHeight;
+      onScrollHeader(scrollable > 120 ? el.scrollTop : 0);
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [onScrollHeader]);
+
   function handleTagInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
     setTagInput(val);
     const q = val.trim().toLowerCase().replace(/^#/, "");
     if (q) {
       const filtered = allTags
-        .filter((t) => t.startsWith(q) && !activeTags.includes(t))
+        .filter((t) => t.includes(q) && !activeTags.includes(t))
+        .sort((a, b) => {
+          if (a === q) return -1;
+          if (b === q) return 1;
+          const aStarts = a.startsWith(q);
+          const bStarts = b.startsWith(q);
+          if (aStarts !== bStarts) return aStarts ? -1 : 1;
+          return 0;
+        })
         .slice(0, 6);
       setTagSuggestions(filtered);
       setActiveSuggestion(0);
@@ -142,7 +165,8 @@ function SearchContent() {
   return (
     <div className={`h-dvh flex flex-col ${isDark ? "theme-dark" : "theme-light"}`}>
       {/* 검색 헤더 */}
-      <div className={`shrink-0 px-4 pt-3 pb-2.5 border-b ${border} ${bg}`}>
+      <div className={`shrink-0 overflow-hidden transition-[max-height] duration-300 ${showHeader ? "max-h-[200px]" : "max-h-0"}`}>
+      <div className={`px-4 pt-3 pb-2.5 border-b ${border} ${bg}`}>
         {/* 통합 검색 컨테이너 */}
         <div className={`rounded-xl border ${isDark ? "bg-[#1c1c1c] border-gray-800" : "bg-gray-50 border-gray-200"}`}>
           {/* 텍스트 검색 */}
@@ -166,7 +190,7 @@ function SearchContent() {
           <div className={`h-px mx-3 ${isDark ? "bg-gray-800" : "bg-gray-200"}`} />
 
           {/* 태그 검색 */}
-          <div className="relative">
+          <div ref={tagAreaRef} className="relative">
             <div className="flex flex-wrap gap-1.5 items-center px-3 py-2 min-h-[36px]">
               <Hash size={13} className={sub} />
               {activeTags.map((tag) => (
@@ -192,16 +216,24 @@ function SearchContent() {
                     if (e.key === "Escape") { setTagSuggestions([]); return; }
                   }
                   if (e.key === "Enter" || e.key === "," || e.key === " ") { e.preventDefault(); addTag(tagInput); }
-                  else if (e.key === "Backspace" && !tagInput && activeTags.length > 0)
-                    setActiveTags((prev) => prev.slice(0, -1));
+                  else if (e.key === "Backspace" && !tagInput && activeTags.length > 0) {
+                    const newTags = activeTags.slice(0, -1);
+                    setActiveTags(newTags);
+                    handleSearch(newTags);
+                  }
                 }}
                 onBlur={() => { setTimeout(() => { setTagSuggestions([]); if (tagInput) addTag(tagInput); }, 150); }}
                 placeholder={activeTags.length === 0 ? "태그 입력..." : ""}
                 className={`flex-1 text-sm bg-transparent outline-none min-w-[80px] ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
               />
             </div>
-            {tagSuggestions.length > 0 && (
-              <ul className={`absolute left-0 right-0 top-full mt-1 z-50 rounded-xl overflow-hidden shadow-xl border ${isDark ? "bg-[#222] border-gray-700" : "bg-white border-gray-200"}`}>
+            {tagSuggestions.length > 0 && (() => {
+              const rect = tagAreaRef.current?.getBoundingClientRect();
+              return (
+              <ul
+                style={{ top: rect ? rect.bottom + 4 : 0, left: rect?.left ?? 0, right: rect ? window.innerWidth - rect.right : 0 }}
+                className={`fixed z-50 rounded-xl overflow-hidden shadow-xl border ${isDark ? "bg-[#222] border-gray-700" : "bg-white border-gray-200"}`}
+              >
                 {tagSuggestions.map((tag, i) => (
                   <li key={tag}>
                     <button
@@ -219,14 +251,17 @@ function SearchContent() {
                   </li>
                 ))}
               </ul>
-            )}
+              );
+            })()}
           </div>
+
         </div>
 
       </div>
+      </div>
 
       {/* 결과 */}
-      <main className="flex-1 overflow-y-auto pb-16">
+      <main ref={scrollRef} className="flex-1 overflow-y-auto pb-16">
         {!searched && !loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
             <Search size={28} className={isDark ? "text-gray-700" : "text-gray-300"} />
