@@ -62,7 +62,17 @@ export function useTagAutocomplete(textareaRef: RefObject<HTMLTextAreaElement | 
     const match = before.match(/#([^\s#]*)$/);
     if (match) {
       const q = match[1].toLowerCase();
-      const filtered = allTags.filter((t) => t.startsWith(q) && t !== q).slice(0, 6);
+      const filtered = allTags
+        .filter((t) => t.includes(q))
+        .sort((a, b) => {
+          if (a === q) return -1;
+          if (b === q) return 1;
+          const aStarts = a.startsWith(q);
+          const bStarts = b.startsWith(q);
+          if (aStarts !== bStarts) return aStarts ? -1 : 1;
+          return 0;
+        })
+        .slice(0, 6);
       setTagQuery(match[1]);
       setTagSuggestions(filtered);
       setActiveSuggestion(0);
