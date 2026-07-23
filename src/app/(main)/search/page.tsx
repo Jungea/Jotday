@@ -29,12 +29,24 @@ function SearchContent() {
   const [page, setPage] = useState(0);
   const [searched, setSearched] = useState(false);
 
+  // 태그 자동완성
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  const [activeSuggestion, setActiveSuggestion] = useState(0);
+
   // 모달
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [modalScrollToId, setModalScrollToId] = useState<string | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const didInitialSearch = useRef(false);
+
+  useEffect(() => {
+    fetch("/api/cards?alltags=true")
+      .then((r) => r.json())
+      .then((tags) => setAllTags(tags))
+      .catch(() => {});
+  }, []);
 
   const fetchResults = useCallback(async (q: string, tags: string[], p: number, replace: boolean) => {
     if (!q && tags.length === 0) {
@@ -93,8 +105,24 @@ function SearchContent() {
     return () => { if (el) observer.unobserve(el); };
   }, [hasMore, loading, page, query, activeTags, fetchResults]);
 
+  function handleTagInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value;
+    setTagInput(val);
+    const q = val.trim().toLowerCase().replace(/^#/, "");
+    if (q) {
+      const filtered = allTags
+        .filter((t) => t.startsWith(q) && !activeTags.includes(t))
+        .slice(0, 6);
+      setTagSuggestions(filtered);
+      setActiveSuggestion(0);
+    } else {
+      setTagSuggestions([]);
+    }
+  }
+
   function addTag(raw: string) {
     const tag = raw.trim().toLowerCase().replace(/^#/, "");
+    setTagSuggestions([]);
     if (!tag || activeTags.includes(tag)) return;
     const newTags = [...activeTags, tag];
     setActiveTags(newTags);
@@ -107,56 +135,101 @@ function SearchContent() {
     setModalScrollToId(scrollToId ?? null);
   }
 
+  const bg = isDark ? "bg-[#111]" : "bg-white";
+  const border = isDark ? "border-gray-800" : "border-gray-200";
+  const chipTag = isDark ? "bg-gray-800 text-gray-200" : "bg-gray-900 text-white";
+
   return (
     <div className={`h-dvh flex flex-col ${isDark ? "theme-dark" : "theme-light"}`}>
       {/* 검색 헤더 */}
-      <div className={`shrink-0 px-4 pt-4 pb-3 border-b ${isDark ? "bg-[#111] border-gray-800" : "bg-white border-gray-200"}`}>
-        <div className={`flex items-center gap-2 rounded-xl px-3 py-2.5 ${isDark ? "bg-[#1c1c1c]" : "bg-gray-100"}`}>
-          <input
-            autoFocus
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
-            placeholder="내용 검색..."
-            className={`flex-1 text-sm bg-transparent outline-none ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
-          />
-          {query && (
-            <button onClick={() => setQuery("")} className={sub}><X size={15} /></button>
-          )}
-          <button onClick={() => handleSearch()} className={sub}>
-            <Search size={16} />
-          </button>
+      <div className={`shrink-0 px-4 pt-3 pb-2.5 border-b ${border} ${bg}`}>
+        {/* 통합 검색 컨테이너 */}
+        <div className={`rounded-xl border ${isDark ? "bg-[#1c1c1c] border-gray-800" : "bg-gray-50 border-gray-200"}`}>
+          {/* 텍스트 검색 */}
+          <div className="flex items-center gap-2 px-3 py-2">
+            <Search size={14} className={sub} />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+              placeholder="내용 검색..."
+              className={`flex-1 text-sm bg-transparent outline-none ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className={`${sub} transition-opacity hover:opacity-60`}><X size={14} /></button>
+            )}
+          </div>
+
+          {/* 구분선 */}
+          <div className={`h-px mx-3 ${isDark ? "bg-gray-800" : "bg-gray-200"}`} />
+
+          {/* 태그 검색 */}
+          <div className="relative">
+            <div className="flex flex-wrap gap-1.5 items-center px-3 py-2 min-h-[36px]">
+              <Hash size={13} className={sub} />
+              {activeTags.map((tag) => (
+                <span key={tag} className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${chipTag}`}>
+                  {tag}
+                  <button
+                    onClick={() => { const newTags = activeTags.filter((t) => t !== tag); setActiveTags(newTags); handleSearch(newTags); }}
+                    className="opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                value={tagInput}
+                onChange={handleTagInputChange}
+                onKeyDown={(e) => {
+                  if (tagSuggestions.length > 0) {
+                    if (e.key === "ArrowDown") { e.preventDefault(); setActiveSuggestion((i) => Math.min(i + 1, tagSuggestions.length - 1)); return; }
+                    if (e.key === "ArrowUp") { e.preventDefault(); setActiveSuggestion((i) => Math.max(i - 1, 0)); return; }
+                    if (e.key === "Tab" || e.key === "Enter") { e.preventDefault(); addTag(tagSuggestions[activeSuggestion]); return; }
+                    if (e.key === "Escape") { setTagSuggestions([]); return; }
+                  }
+                  if (e.key === "Enter" || e.key === "," || e.key === " ") { e.preventDefault(); addTag(tagInput); }
+                  else if (e.key === "Backspace" && !tagInput && activeTags.length > 0)
+                    setActiveTags((prev) => prev.slice(0, -1));
+                }}
+                onBlur={() => { setTimeout(() => { setTagSuggestions([]); if (tagInput) addTag(tagInput); }, 150); }}
+                placeholder={activeTags.length === 0 ? "태그 입력..." : ""}
+                className={`flex-1 text-sm bg-transparent outline-none min-w-[80px] ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
+              />
+            </div>
+            {tagSuggestions.length > 0 && (
+              <ul className={`absolute left-0 right-0 top-full mt-1 z-50 rounded-xl overflow-hidden shadow-xl border ${isDark ? "bg-[#222] border-gray-700" : "bg-white border-gray-200"}`}>
+                {tagSuggestions.map((tag, i) => (
+                  <li key={tag}>
+                    <button
+                      onMouseDown={(e) => { e.preventDefault(); addTag(tag); }}
+                      onMouseEnter={() => setActiveSuggestion(i)}
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
+                        i === activeSuggestion
+                          ? isDark ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-900"
+                          : isDark ? "text-gray-300 hover:bg-gray-800" : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Hash size={12} className={sub} />
+                      {tag}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1.5 items-center mt-2.5 min-h-[28px]">
-          <Hash size={13} className={sub} />
-          {activeTags.map((tag) => (
-            <span key={tag} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${isDark ? "bg-gray-800 text-gray-300" : "bg-gray-200 text-gray-700"}`}>
-              {tag}
-              <button onClick={() => { const newTags = activeTags.filter((t) => t !== tag); setActiveTags(newTags); handleSearch(newTags); }} className="hover:opacity-70"><X size={10} /></button>
-            </span>
-          ))}
-          <input
-            type="text"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === "," || e.key === " ") { e.preventDefault(); addTag(tagInput); }
-              else if (e.key === "Backspace" && !tagInput && activeTags.length > 0)
-                setActiveTags((prev) => prev.slice(0, -1));
-            }}
-            onBlur={() => { if (tagInput) addTag(tagInput); }}
-            placeholder={activeTags.length === 0 ? "태그 입력 후 Enter" : ""}
-            className={`flex-1 text-xs bg-transparent outline-none min-w-[80px] ${isDark ? "text-white placeholder-gray-600" : "text-gray-900 placeholder-gray-400"}`}
-          />
-        </div>
+
       </div>
 
       {/* 결과 */}
       <main className="flex-1 overflow-y-auto pb-16">
         {!searched && !loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-2">
-            <Search size={32} className={isDark ? "text-gray-700" : "text-gray-300"} />
+            <Search size={28} className={isDark ? "text-gray-700" : "text-gray-300"} />
             <p className={`text-sm ${sub}`}>내용이나 태그로 검색해보세요</p>
           </div>
         ) : loading && cards.length === 0 ? (
@@ -168,13 +241,16 @@ function SearchContent() {
             <p className={`text-sm ${sub}`}>검색 결과가 없어요</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-0 px-4 py-4">
+          <div className="flex flex-col items-center px-4 py-4">
+            {/* 결과 수 */}
+            <p className={`self-start text-xs mb-3 ${sub}`}>카드 {cards.length}개{hasMore ? " 이상" : ""}</p>
+
             {cards.map((card, i) => {
               const showDate = i === 0 || cards[i - 1].date !== card.date;
               return (
                 <div key={card.id} className={`w-full max-w-sm ${i > 0 ? "mt-3" : ""}`}>
                   {showDate && (
-                    <p className={`text-xs mb-1 ${i > 0 ? "mt-2" : ""} ${sub}`}>
+                    <p className={`text-xs font-medium mb-1.5 ${i > 0 ? "mt-3" : ""} ${sub}`}>
                       {format(parseISO(card.date), "yyyy년 M월 d일 (E)", { locale: ko })}
                     </p>
                   )}
@@ -196,6 +272,9 @@ function SearchContent() {
             <div ref={sentinelRef} className="w-full h-4" />
             {loading && (
               <div className={`w-6 h-6 border-4 border-t-transparent rounded-full animate-spin mt-2 ${isDark ? "border-gray-600" : "border-gray-300"}`} />
+            )}
+            {!hasMore && cards.length > 0 && (
+              <p className={`text-xs mt-2 ${sub}`}>모든 카드를 불러왔어요</p>
             )}
           </div>
         )}
