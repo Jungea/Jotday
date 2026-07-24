@@ -136,8 +136,28 @@ export default function PhotosPage() {
           </div>
         ) : (
           <>
-            {groups.map((group) => (
+            {groups.map((group, i) => {
+              const prev = groups[i - 1];
+              const yearChanged = prev && group.date.slice(0, 4) !== prev.date.slice(0, 4);
+              const monthChanged = prev && !yearChanged && group.date.slice(0, 7) !== prev.date.slice(0, 7);
+              return (
               <div key={group.date}>
+                {yearChanged && (
+                  <div className={`flex items-center gap-3 px-4 py-4 ${bg}`}>
+                    <div className={`flex-1 h-[2px] ${isDark ? "bg-gray-600" : "bg-gray-300"}`} />
+                    <span className={`text-sm font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+                      {group.date.slice(0, 4)}년
+                    </span>
+                  </div>
+                )}
+                {monthChanged && (
+                  <div className={`flex items-center gap-3 px-4 py-3 ${bg}`}>
+                    <div className={`flex-1 h-px ${isDark ? "bg-gray-700" : "bg-gray-200"}`} />
+                    <span className={`text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                      {format(new Date(`${group.date}T00:00:00`), "M월", { locale: ko })}
+                    </span>
+                  </div>
+                )}
                 <div className={`px-4 py-2 text-xs font-medium ${sub} ${isDark ? "bg-[#111]" : "bg-gray-50"}`}>
                   {format(new Date(`${group.date}T00:00:00`), "yyyy년 M월 d일 (E)", { locale: ko })}
                 </div>
@@ -162,7 +182,7 @@ export default function PhotosPage() {
                   ))}
                 </div>
               </div>
-            ))}
+            );})}
 
             <div ref={sentinelRef} className="w-full h-4" />
 

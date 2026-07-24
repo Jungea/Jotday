@@ -134,7 +134,7 @@ export async function getMonthMetaByTag(db: DB, userId: string, month: string, t
 }
 
 export async function getPhotoCards(db: DB, userId: string, page: number): Promise<{ cards: Card[]; hasMore: boolean }> {
-  const limit = 100;
+  const limit = 150;
   const { data, error } = await db
     .from("cards")
     .select("*")
