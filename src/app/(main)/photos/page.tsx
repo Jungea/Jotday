@@ -11,7 +11,6 @@ import { useScrollHeader } from "@/hooks/useScrollHeader";
 import { useThemeStore } from "@/store/theme";
 import type { Card } from "@/types";
 
-
 interface PhotoItem {
   url: string;
   cardId: string;
@@ -19,7 +18,7 @@ interface PhotoItem {
 }
 
 function toThumbnail(url: string): string {
-  return url.replace("/upload/", "/upload/w_100,q_auto,f_auto/");
+  return url.replace("/upload/", "/upload/w_120,q_auto,f_auto/");
 }
 
 function extractPhotos(cards: Card[]): PhotoItem[] {
@@ -85,9 +84,7 @@ export default function PhotosPage() {
     fetchingRef.current = false;
   }, []);
 
-  useEffect(() => {
-    fetchNext();
-  }, [fetchNext]);
+  useEffect(() => { fetchNext(); }, [fetchNext]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -96,6 +93,12 @@ export default function PhotosPage() {
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, [onScrollHeader]);
+
+  useEffect(() => {
+    if (!initialLoaded || !hasMore) return;
+    const el = scrollRef.current;
+    if (el && el.scrollHeight <= el.clientHeight) fetchNext();
+  }, [photos, initialLoaded, hasMore, fetchNext]);
 
   useEffect(() => {
     if (!hasMore) return;
@@ -111,7 +114,6 @@ export default function PhotosPage() {
   const bg = isDark ? "bg-[#111]" : "bg-white";
   const sub = isDark ? "text-gray-400" : "text-gray-500";
 
-  // 날짜별 그룹
   const groups: { date: string; photos: PhotoItem[] }[] = [];
   for (const photo of photos) {
     const last = groups[groups.length - 1];
@@ -139,7 +141,7 @@ export default function PhotosPage() {
                 <div className={`px-4 py-2 text-xs font-medium ${sub} ${isDark ? "bg-[#111]" : "bg-gray-50"}`}>
                   {format(new Date(`${group.date}T00:00:00`), "yyyy년 M월 d일 (E)", { locale: ko })}
                 </div>
-                <div className="grid grid-cols-6 gap-px">
+                <div className="grid grid-cols-5 gap-px">
                   {group.photos.map((photo, i) => (
                     <button
                       key={`${photo.cardId}-${i}`}
