@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+
+function toCalendarThumb(url: string | null): string | null {
+  if (!url) return null;
+  return url.replace("/upload/", "/upload/w_120,h_120,c_fill,q_auto,f_auto/");
+}
 import { useRouter } from "next/navigation";
 import {
   format,
@@ -378,7 +383,7 @@ function DayCell({
       {displayImage && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={displayImage}
+          src={toCalendarThumb(displayImage)!}
           alt=""
           className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65"
         />
@@ -454,7 +459,7 @@ function GhostDayCell({ day, meta, isDark, onClick, tagMeta, tagActive }: { day:
     >
       {displayImage && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={displayImage} alt="" className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65" />
+        <img src={toCalendarThumb(displayImage)!} alt="" className="absolute inset-0 w-full h-full object-cover rounded-md opacity-65" />
       )}
       {!displayImage && displayEmoji && (
         <div className={`absolute inset-0 flex items-center justify-center rounded-md ${isDark ? "bg-[#1a2535]" : "bg-gray-100"}`}>
