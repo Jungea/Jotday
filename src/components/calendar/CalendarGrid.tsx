@@ -53,6 +53,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const currentYear = current.getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const years = Array.from({ length: 11 }, (_, i) => currentYear - 5 + i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
@@ -123,7 +124,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
           <ChevronLeft size={20} />
         </button>
         <button
-          onClick={() => setShowJump(true)}
+          onClick={() => { setSelectedYear(currentYear); setShowJump(true); }}
           className={`text-xl font-bold px-2 py-1 rounded-lg transition-colors ${isDark ? "text-white hover:bg-gray-800" : "text-gray-900 hover:bg-gray-100"}`}
         >
           {format(current, "yyyy년 M월", { locale: ko })}
@@ -274,9 +275,9 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
               {years.map((y) => (
                 <button
                   key={y}
-                  onClick={() => handleJump(y, current.getMonth() + 1)}
+                  onClick={() => setSelectedYear(y)}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
-                    ${y === currentYear
+                    ${y === selectedYear
                       ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
                       : isDark ? "bg-gray-800 text-gray-300" : "bg-gray-100 text-gray-600"
                     }`}
@@ -291,7 +292,7 @@ export function CalendarGrid({ dayMetas, onMonthChange, initialMonth, onDataChan
               {months.map((m) => (
                 <button
                   key={m}
-                  onClick={() => handleJump(currentYear, m)}
+                  onClick={() => handleJump(selectedYear, m)}
                   className={`py-2.5 rounded-xl text-sm font-medium transition-colors
                     ${m === current.getMonth() + 1
                       ? isDark ? "bg-white text-black" : "bg-gray-900 text-white"
