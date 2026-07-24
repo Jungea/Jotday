@@ -133,6 +133,21 @@ export async function getMonthMetaByTag(db: DB, userId: string, month: string, t
   return aggregateMonthMeta(data ?? []);
 }
 
+export async function getPhotoCards(db: DB, userId: string, page: number): Promise<{ cards: Card[]; hasMore: boolean }> {
+  const limit = 40;
+  const { data, error } = await db
+    .from("cards")
+    .select("*")
+    .eq("user_id", userId)
+    .in("type", ["image", "mixed"])
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(page * limit, (page + 1) * limit - 1);
+  if (error) throw new Error(error.message);
+  const cards = data ?? [];
+  return { cards, hasMore: cards.length === limit };
+}
+
 // ── POST ─────────────────────────────────────────────────────────────────────
 
 export async function createCard(db: DB, userId: string, opts: {

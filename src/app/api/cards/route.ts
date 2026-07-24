@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   getAllTags, searchCards, getFeedCards, getCardsByDate, getMonthMeta, getMonthMetaByTag,
-  getMemoryCards,
+  getMemoryCards, getPhotoCards,
   createCard, copyCard,
   moveCardDate, setRepresentative, unsetRepresentative, updateCard,
   deleteCard,
@@ -55,6 +55,11 @@ export async function GET(request: NextRequest) {
   try {
     if (searchParams.get("alltags") === "true")
       return NextResponse.json(await getAllTags(supabase, user.id));
+
+    if (searchParams.get("photos") === "true") {
+      const page = parseInt(searchParams.get("page") ?? "0", 10);
+      return NextResponse.json(await getPhotoCards(supabase, user.id, isNaN(page) ? 0 : page));
+    }
 
     if (searchParams.get("memories") === "true") {
       const datesParam = searchParams.get("dates");
