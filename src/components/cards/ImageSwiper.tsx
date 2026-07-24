@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { cloudinaryResized } from "@/hooks/useImageSlots";
 
 function touchDist(t: TouchList) {
   return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
@@ -215,7 +216,7 @@ export function Lightbox({ images, startIndex, onClose }: { images: { url: strin
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={img.url}
+              src={cloudinaryResized(img.url, 1600)}
               alt=""
               draggable={false}
               style={{
@@ -289,7 +290,7 @@ export function ImageSwiper({ images, disableLightbox }: { images: { url: string
       <>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={images[0].url}
+          src={cloudinaryResized(images[0].url, 800)}
           alt=""
           className="w-full h-auto cursor-pointer"
           onClick={disableLightbox ? undefined : () => setLightboxIndex(0)}
@@ -319,7 +320,7 @@ export function ImageSwiper({ images, disableLightbox }: { images: { url: string
             // eslint-disable-next-line @next/next/no-img-element
             <img
               key={i}
-              src={img.url}
+              src={cloudinaryResized(img.url, 800)}
               alt=""
               draggable={false}
               className="h-auto pointer-events-none"
