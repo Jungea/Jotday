@@ -222,7 +222,10 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
           date={date}
           editCard={editCard}
           onSuccess={() => setEditCard(null)}
-          onSaved={(card) => setCards((prev) => prev.map((c) => c.id === card.id ? card : c))}
+          onSaved={(card) => setCards((prev) => {
+              const filtered = prev.filter((c) => c.id !== card.id);
+              return insertSorted(filtered, card, daySort === "desc");
+            })}
           onCancel={() => setEditCard(null)}
         />
       )}
