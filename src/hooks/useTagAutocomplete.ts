@@ -46,6 +46,15 @@ export function useTagAutocomplete(textareaRef: RefObject<HTMLTextAreaElement | 
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const tagQueryRef = useRef(tagQuery);
   useEffect(() => { tagQueryRef.current = tagQuery; }, [tagQuery]);
+  const pendingCursorRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (pendingCursorRef.current !== null && textareaRef.current) {
+      const pos = pendingCursorRef.current;
+      pendingCursorRef.current = null;
+      textareaRef.current.selectionStart = pos;
+      textareaRef.current.selectionEnd = pos;
+    }
+  }, [content, textareaRef]);
 
   useEffect(() => {
     fetch("/api/cards?alltags=true")
@@ -55,9 +64,14 @@ export function useTagAutocomplete(textareaRef: RefObject<HTMLTextAreaElement | 
   }, []);
 
   function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const val = e.target.value;
+    let val = e.target.value;
+    let cursor = e.target.selectionStart ?? 0;
+    if (cursor >= 2 && val[cursor - 1] === "." && val[cursor - 2] === ".") {
+      val = val.slice(0, cursor - 2) + "#" + val.slice(cursor);
+      cursor = cursor - 1;
+      pendingCursorRef.current = cursor;
+    }
     setContent(val);
-    const cursor = e.target.selectionStart ?? 0;
     const before = val.slice(0, cursor);
     const match = before.match(/#([^\s#]*)$/);
     if (match) {
