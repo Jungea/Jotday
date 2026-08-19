@@ -21,5 +21,14 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    share_target: {
+      action: "/share-target",
+      method: "POST",
+      enctype: "multipart/form-data",
+      params: {
+        files: [{ name: "images", accept: ["image/*"] }],
+      },
+    } as any,
   };
 }

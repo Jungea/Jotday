@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { format, addMonths, subMonths, parse } from "date-fns";
 import { Plus, Camera, Clock } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { CardForm } from "@/components/cards/CardForm";
 import { CameraModal } from "@/components/cards/CameraModal";
 import { ImageCropModal } from "@/components/cards/ImageCropModal";
+import { ShareTargetModal } from "@/components/cards/ShareTargetModal";
 import { useToastStore } from "@/store/toast";
 import { useGlobalLoadingStore } from "@/store/globalLoading";
 import { CollapsingHeader } from "@/components/ui/CollapsingHeader";
@@ -18,6 +19,7 @@ import type { DayMeta } from "@/types";
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [dayMetas, setDayMetas] = useState<DayMeta[]>([]);
   const [currentMonth, setCurrentMonth] = useState(
     searchParams.get("month") ?? format(new Date(), "yyyy-MM")
@@ -36,6 +38,7 @@ function HomeContent() {
   const setSelectedTag = useCalendarTagsStore((s) => s.setSelectedTag);
   const [tagDayMetas, setTagDayMetas] = useState<DayMeta[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showQuickCamera, setShowQuickCamera] = useState(false);
   const [quickCropSrc, setQuickCropSrc] = useState<string | null>(null);
   const today = format(new Date(), "yyyy-MM-dd");
@@ -80,6 +83,15 @@ function HomeContent() {
   }, [currentMonth, selectedTag, fetchTagMetas]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+
+  // 갤러리 공유 수신 감지
+  useEffect(() => {
+    if (searchParams.get("share") === "incoming") {
+      setShowShareModal(true);
+      router.replace("/");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isDark = theme === "dark";
 
@@ -199,6 +211,10 @@ function HomeContent() {
           onConfirm={handleQuickCropConfirm}
           onCancel={() => { URL.revokeObjectURL(quickCropSrc); setQuickCropSrc(null); }}
         />
+      )}
+
+      {showShareModal && (
+        <ShareTargetModal onClose={() => { setShowShareModal(false); fetchMetas(currentMonth); }} />
       )}
 
       {showForm && (

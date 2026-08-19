@@ -1,4 +1,5 @@
 const STATIC_CACHE = "jotday-static-v1";
+const SHARE_CACHE = "jotday-share";
 
 // 설치: 즉시 활성화
 self.addEventListener("install", (event) => {
@@ -11,7 +12,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith("jotday-") && k !== STATIC_CACHE)
+          .filter((k) => k.startsWith("jotday-") && k !== STATIC_CACHE && k !== SHARE_CACHE)
           .map((k) => caches.delete(k))
       )
     )
@@ -22,6 +23,29 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // 갤러리 공유 수신: 이미지 파일을 캐시에 저장 후 홈으로 리다이렉트
+  if (url.pathname === "/share-target" && request.method === "POST") {
+    event.respondWith(
+      (async () => {
+        const formData = await request.formData();
+        const files = formData.getAll("images");
+        const cache = await caches.open(SHARE_CACHE);
+        const existing = await cache.keys();
+        await Promise.all(existing.map((k) => cache.delete(k)));
+        await Promise.all(
+          files.map((file, i) =>
+            cache.put(
+              `/share-file-${i}`,
+              new Response(file, { headers: { "Content-Type": file.type } })
+            )
+          )
+        );
+        return Response.redirect("/?share=incoming", 303);
+      })()
+    );
+    return;
+  }
 
   // /_next/static/ 파일: 콘텐츠 해시 기반이므로 영구 캐시
   if (url.pathname.startsWith("/_next/static/")) {
