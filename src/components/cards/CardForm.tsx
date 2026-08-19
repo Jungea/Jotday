@@ -55,12 +55,15 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
 
   useModalHistoryBack(onCancel);
 
-  const busy = uploading;
+  const [submitting, setSubmitting] = useState(false);
+  const busy = uploading || submitting;
   const uploadedCount = slots.filter((s) => s.kind === "uploaded").length;
   const displayError = uploadError;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
+    setSubmitting(true);
     setUploadError(null);
     if (visualText.trim()) await saveRecent(visualText.trim());
 
