@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useLayoutEffect } from "react";
 import { X, RefreshCw, Zap, ZapOff, Grid3x3, Timer } from "lucide-react";
 
 interface Props {
@@ -38,6 +38,7 @@ export function CameraModal({ onCapture, onCancel }: Props) {
   const [captureFlash, setCaptureFlash] = useState(false);
   const [zoomLabel, setZoomLabel] = useState<string | null>(null);
   const [focusIndicator, setFocusIndicator] = useState<{ x: number; y: number; fade: boolean } | null>(null);
+  const [vfRect, setVfRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const applyZoom = useCallback((value: number) => {
     const hwRange = hwZoomRef.current;
@@ -154,6 +155,23 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     };
   }, [applyZoom]);
 
+  // 4:5 뷰파인더 위치 계산
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const cw = el.clientWidth;
+      const ch = el.clientHeight;
+      const vfW = Math.min(cw, ch * (4 / 5));
+      const vfH = vfW * (5 / 4);
+      setVfRect({ x: (cw - vfW) / 2, y: (ch - vfH) / 2, w: vfW, h: vfH });
+    };
+    const obs = new ResizeObserver(update);
+    obs.observe(el);
+    update();
+    return () => obs.disconnect();
+  }, []);
+
   function handleTapFocus(e: React.MouseEvent<HTMLDivElement>) {
     if (!focusSupportedRef.current) return;
     const track = streamRef.current?.getVideoTracks()[0];
@@ -195,19 +213,50 @@ export function CameraModal({ onCapture, onCancel }: Props) {
 
   async function doCapture() {
     const video = videoRef.current;
-    if (!video || !ready) return;
+    const container = containerRef.current;
+    if (!video || !ready || !container) return;
 
     setCaptureFlash(true);
     setTimeout(() => setCaptureFlash(false), 150);
 
-    const w = video.videoWidth;
-    const h = video.videoHeight;
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+
+    // object-cover 기준으로 비디오가 화면에 렌더링되는 스케일
+    const videoScale = Math.max(cw / vw, ch / vh);
+    const hiddenX = (vw * videoScale - cw) / 2; // 화면 밖으로 나간 렌더링 픽셀 (좌우)
+    const hiddenY = (vh * videoScale - ch) / 2; // 화면 밖으로 나간 렌더링 픽셀 (상하)
+
+    // 4:5 뷰파인더 영역 (컨테이너 좌표)
+    const vfW = Math.min(cw, ch * (4 / 5));
+    const vfH = vfW * (5 / 4);
+    const vfX = (cw - vfW) / 2;
+    const vfY = (ch - vfH) / 2;
+
+    // 뷰파인더를 비디오 픽셀 좌표로 변환
+    let srcX = (vfX + hiddenX) / videoScale;
+    let srcY = (vfY + hiddenY) / videoScale;
+    let srcW = vfW / videoScale;
+    let srcH = vfH / videoScale;
+
+    // 소프트웨어 줌: 뷰파인더 중심을 기준으로 더 크롭
     const currentZoom = zoomRef.current;
     const isHw = !!hwZoomRef.current;
-    const sw = isHw || currentZoom <= 1 ? w : Math.round(w / currentZoom);
-    const sh = isHw || currentZoom <= 1 ? h : Math.round(h / currentZoom);
-    const sx = Math.round((w - sw) / 2);
-    const sy = Math.round((h - sh) / 2);
+    if (!isHw && currentZoom > 1) {
+      const zW = srcW / currentZoom;
+      const zH = srcH / currentZoom;
+      srcX += (srcW - zW) / 2;
+      srcY += (srcH - zH) / 2;
+      srcW = zW;
+      srcH = zH;
+    }
+
+    const sx = Math.round(srcX);
+    const sy = Math.round(srcY);
+    const sw = Math.round(srcW);
+    const sh = Math.round(srcH);
 
     try {
       if (typeof OffscreenCanvas !== "undefined") {
@@ -341,13 +390,50 @@ export function CameraModal({ onCapture, onCancel }: Props) {
             className="w-full h-full object-cover"
           />
 
-          {/* 격자선 */}
-          {grid && (
+          {/* 4:5 뷰파인더 오버레이 */}
+          {vfRect && (
             <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 bottom-0 left-1/3 w-px bg-white/30" />
-              <div className="absolute top-0 bottom-0 left-2/3 w-px bg-white/30" />
-              <div className="absolute left-0 right-0 top-1/3 h-px bg-white/30" />
-              <div className="absolute left-0 right-0 top-2/3 h-px bg-white/30" />
+              {/* 뷰파인더 바깥 어두운 영역 */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: vfRect.x,
+                  top: vfRect.y,
+                  width: vfRect.w,
+                  height: vfRect.h,
+                  boxShadow: "0 0 0 9999px rgba(0,0,0,0.45)",
+                  borderRadius: 3,
+                }}
+              />
+              {/* 뷰파인더 테두리 */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: vfRect.x,
+                  top: vfRect.y,
+                  width: vfRect.w,
+                  height: vfRect.h,
+                  border: "1.5px solid rgba(255,255,255,0.6)",
+                  borderRadius: 3,
+                }}
+              />
+              {/* 격자선 (뷰파인더 내부) */}
+              {grid && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: vfRect.x,
+                    top: vfRect.y,
+                    width: vfRect.w,
+                    height: vfRect.h,
+                  }}
+                >
+                  <div className="absolute top-0 bottom-0 left-1/3 w-px bg-white/30" />
+                  <div className="absolute top-0 bottom-0 left-2/3 w-px bg-white/30" />
+                  <div className="absolute left-0 right-0 top-1/3 h-px bg-white/30" />
+                  <div className="absolute left-0 right-0 top-2/3 h-px bg-white/30" />
+                </div>
+              )}
             </div>
           )}
 
