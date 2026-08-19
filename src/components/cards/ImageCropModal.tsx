@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Check, RotateCw, LockOpen, Lock } from "lucide-react";
 
-const ASPECT_W = 4;
-const ASPECT_H = 5;
+const ASPECT_W = 3;
+const ASPECT_H = 4;
 
 interface Props {
   src: string;
@@ -230,7 +230,7 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
 
     const canvas = document.createElement("canvas");
     canvas.width = 1080;
-    canvas.height = 1350;
+    canvas.height = 1440;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.fillStyle = "#000000";

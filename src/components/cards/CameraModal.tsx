@@ -162,8 +162,8 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     const update = () => {
       const cw = el.clientWidth;
       const ch = el.clientHeight;
-      const vfW = Math.min(cw, ch * (4 / 5));
-      const vfH = vfW * (5 / 4);
+      const vfW = Math.min(cw, ch * (3 / 4));
+      const vfH = vfW * (4 / 3);
       setVfRect({ x: (cw - vfW) / 2, y: (ch - vfH) / 2, w: vfW, h: vfH });
     };
     const obs = new ResizeObserver(update);
@@ -230,8 +230,8 @@ export function CameraModal({ onCapture, onCancel }: Props) {
     const hiddenY = (vh * videoScale - ch) / 2; // 화면 밖으로 나간 렌더링 픽셀 (상하)
 
     // 4:5 뷰파인더 영역 (컨테이너 좌표)
-    const vfW = Math.min(cw, ch * (4 / 5));
-    const vfH = vfW * (5 / 4);
+    const vfW = Math.min(cw, ch * (3 / 4));
+    const vfH = vfW * (4 / 3);
     const vfX = (cw - vfW) / 2;
     const vfY = (ch - vfH) / 2;
 
