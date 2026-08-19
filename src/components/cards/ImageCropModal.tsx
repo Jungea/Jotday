@@ -234,8 +234,8 @@ export function ImageCropModal({ src, current, total, onConfirm, onCancel }: Pro
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.fillStyle = "#000000";
-    ctx.fillRect(0, 0, 1080, 1350);
-    ctx.drawImage(img, (fx - imageLeft) / s, (fy - imageTop) / s, fw / s, fh / s, 0, 0, 1080, 1350);
+    ctx.fillRect(0, 0, 1080, 1440);
+    ctx.drawImage(img, (fx - imageLeft) / s, (fy - imageTop) / s, fw / s, fh / s, 0, 0, 1080, 1440);
     canvas.toBlob((blob) => {
       if (!blob) return;
       onConfirm(new File([blob], "image.jpg", { type: "image/jpeg" }));

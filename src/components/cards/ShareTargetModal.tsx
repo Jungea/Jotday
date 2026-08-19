@@ -23,6 +23,7 @@ export function ShareTargetModal({ onClose }: ShareTargetModalProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [time, setTime] = useState(format(new Date(), "HH:mm"));
+  const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,12 +89,14 @@ export function ShareTargetModal({ onClose }: ShareTargetModalProps) {
         })
       );
 
+      const tags = (content.match(/#([^\s#]+)/g) ?? []).map((t) => t.slice(1).toLowerCase());
       const cardData = new FormData();
       cardData.append("date", date);
-      cardData.append("type", "image");
+      cardData.append("type", "mixed");
       cardData.append("time", new Date(`${date}T${time}:00`).toISOString());
+      if (content) cardData.append("content", content);
       cardData.append("images", JSON.stringify(uploadedImages));
-      cardData.append("tags", JSON.stringify([]));
+      cardData.append("tags", JSON.stringify(tags));
       const res = await fetch("/api/cards", { method: "POST", body: cardData });
       if (!res.ok) throw new Error("카드 저장 실패");
 
@@ -148,29 +151,38 @@ export function ShareTargetModal({ onClose }: ShareTargetModalProps) {
                 ))}
               </div>
 
-              {/* 날짜·시간 */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <div className="flex items-center gap-2">
-                  <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>날짜</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                    className={inputCls}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간</label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                    className={inputCls}
-                  />
-                </div>
+              {/* 날짜 */}
+              <div className="flex items-center gap-2">
+                <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>날짜</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                  className={inputCls}
+                />
               </div>
+
+              {/* 시간 */}
+              <div className="flex items-center gap-2">
+                <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간</label>
+                <input
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                  className={inputCls}
+                />
+              </div>
+
+              {/* 내용 */}
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="내용을 입력하세요..."
+                rows={4}
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none ${isDark ? "border-gray-700 bg-[#111] text-white placeholder-gray-600" : "border-gray-200 bg-white text-gray-900 placeholder-gray-400"}`}
+              />
             </>
           )}
         </div>
