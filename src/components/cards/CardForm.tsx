@@ -157,41 +157,44 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
           <div className="overflow-y-auto flex-1 px-5 py-4">
             <form id="card-form" onSubmit={handleSubmit} className="space-y-4">
               {isEdit ? (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>기록 시간</label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                    className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
-                  />
-                  <span className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>~</span>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                    placeholder="종료"
-                    className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
-                  />
-                  {endTime && (
-                    <button type="button" onClick={() => setEndTime("")} className={`text-xs ${isDark ? "text-gray-600 hover:text-gray-400" : "text-gray-400 hover:text-gray-600"}`}>✕</button>
-                  )}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>기록 시간</label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                      className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>~</span>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                      className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
+                    />
+                    {endTime && (
+                      <button type="button" onClick={() => setEndTime("")} className={`text-xs ${isDark ? "text-gray-600 hover:text-gray-400" : "text-gray-400 hover:text-gray-600"}`}>✕</button>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <span className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간 직접 설정</span>
-                    <span
-                      onClick={() => setManualTime((v) => !v)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${manualTime ? (isDark ? "bg-white" : "bg-gray-900") : (isDark ? "bg-gray-700" : "bg-gray-200")}`}
-                    >
-                      <span className={`inline-block h-3.5 w-3.5 rounded-full shadow-sm transition-transform duration-200 ${manualTime ? "translate-x-[20px]" : "translate-x-[2px]"} ${manualTime && isDark ? "bg-gray-900" : "bg-white"}`} />
-                    </span>
-                  </label>
-                  {manualTime && (
-                    <>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <span className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간 직접 설정</span>
+                      <span
+                        onClick={() => setManualTime((v) => !v)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ${manualTime ? (isDark ? "bg-white" : "bg-gray-900") : (isDark ? "bg-gray-700" : "bg-gray-200")}`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 rounded-full shadow-sm transition-transform duration-200 ${manualTime ? "translate-x-[20px]" : "translate-x-[2px]"} ${manualTime && isDark ? "bg-gray-900" : "bg-white"}`} />
+                      </span>
+                    </label>
+                    {manualTime && (
                       <input
                         type="time"
                         value={time}
@@ -199,6 +202,10 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
                         onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
                         className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
                       />
+                    )}
+                  </div>
+                  {manualTime && (
+                    <div className="flex items-center gap-2">
                       <span className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>~</span>
                       <input
                         type="time"
@@ -210,7 +217,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
                       {endTime && (
                         <button type="button" onClick={() => setEndTime("")} className={`text-xs ${isDark ? "text-gray-600 hover:text-gray-400" : "text-gray-400 hover:text-gray-600"}`}>✕</button>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               )}
