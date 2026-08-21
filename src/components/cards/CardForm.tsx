@@ -38,6 +38,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
   const [visualText, setVisualText] = useState(editCard?.emojis?.[0] ?? "");
   const [showEmojiPicker, setShowEmojiPicker] = useState(!!(editCard?.emojis?.[0]));
   const [time, setTime] = useState(editCard ? format(new Date(editCard.created_at), "HH:mm") : format(new Date(), "HH:mm"));
+  const [endTime, setEndTime] = useState(editCard?.end_at ? format(new Date(editCard.end_at), "HH:mm") : "");
   const [manualTime, setManualTime] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +75,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
       formData.append("type", "mixed");
       if (content) formData.append("content", content);
       if (time) formData.append("time", new Date(`${date}T${time}:00`).toISOString());
+      formData.append("end_at", endTime ? new Date(`${date}T${endTime}:00`).toISOString() : "");
       formData.append("tags", JSON.stringify(extractTags(content)));
       formData.append("emojis", JSON.stringify(visualText.trim() ? [visualText.trim()] : []));
 
@@ -93,6 +95,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
       formData.append("type", "mixed");
       if (content) formData.append("content", content);
       formData.append("time", new Date(`${date}T${manualTime ? time : format(new Date(), "HH:mm")}:00`).toISOString());
+      if (endTime) formData.append("end_at", new Date(`${date}T${endTime}:00`).toISOString());
       formData.append("tags", JSON.stringify(extractTags(content)));
       formData.append("emojis", JSON.stringify(visualText.trim() ? [visualText.trim()] : []));
       formData.append("images", JSON.stringify(
@@ -112,6 +115,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
         emojis: visualText.trim() ? [visualText.trim()] : [],
         images: doneSlots.map((s) => ({ url: s.url, public_id: s.publicId })),
         created_at: new Date(`${date}T${time}:00`).toISOString(),
+        end_at: endTime ? new Date(`${date}T${endTime}:00`).toISOString() : null,
         updated_at: new Date().toISOString(),
       };
       onSaved(optimistic);
@@ -153,7 +157,7 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
           <div className="overflow-y-auto flex-1 px-5 py-4">
             <form id="card-form" onSubmit={handleSubmit} className="space-y-4">
               {isEdit ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <label className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>기록 시간</label>
                   <input
                     type="time"
@@ -162,9 +166,21 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
                     onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
                     className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
                   />
+                  <span className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>~</span>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                    placeholder="종료"
+                    className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
+                  />
+                  {endTime && (
+                    <button type="button" onClick={() => setEndTime("")} className={`text-xs ${isDark ? "text-gray-600 hover:text-gray-400" : "text-gray-400 hover:text-gray-600"}`}>✕</button>
+                  )}
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <span className={`text-sm whitespace-nowrap ${isDark ? "text-gray-400" : "text-gray-500"}`}>시간 직접 설정</span>
                     <span
@@ -175,13 +191,26 @@ export function CardForm({ date, editCard, onSuccess, onSaved, onCancel }: CardF
                     </span>
                   </label>
                   {manualTime && (
-                    <input
-                      type="time"
-                      value={time}
-                      onChange={(e) => setTime(e.target.value)}
-                      onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                      className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
-                    />
+                    <>
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                        className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
+                      />
+                      <span className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>~</span>
+                      <input
+                        type="time"
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
+                        className={`border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDark ? "border-gray-700 bg-[#111] text-white" : "border-gray-200 bg-white text-gray-900"}`}
+                      />
+                      {endTime && (
+                        <button type="button" onClick={() => setEndTime("")} className={`text-xs ${isDark ? "text-gray-600 hover:text-gray-400" : "text-gray-400 hover:text-gray-600"}`}>✕</button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

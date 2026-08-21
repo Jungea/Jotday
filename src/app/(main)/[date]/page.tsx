@@ -2,10 +2,11 @@
 
 import { use, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Link, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Link, Clock, List, AlignJustify } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CardItem } from "@/components/cards/CardItem";
+import { DayTimeline } from "@/components/cards/DayTimeline";
 import { cardBarGradient } from "@/lib/timeColor";
 import { CardForm } from "@/components/cards/CardForm";
 import { useThemeStore } from "@/store/theme";
@@ -36,6 +37,7 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
   const [showForm, setShowForm] = useState(false);
   const [editCard, setEditCard] = useState<Card | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
   const theme = useThemeStore((s) => s.theme);
   const expiryDays = useShareSettingsStore((s) => s.expiryDays);
   const addToast = useToastStore((s) => s.addToast);
@@ -153,6 +155,12 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
         </span>
 
         <button
+          onClick={() => setViewMode((v) => v === "list" ? "timeline" : "list")}
+          className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"} ${viewMode === "timeline" ? isDark ? "text-white" : "text-gray-900" : ""}`}
+        >
+          {viewMode === "list" ? <AlignJustify size={18} /> : <List size={18} />}
+        </button>
+        <button
           onClick={handleShareDate}
           className={`p-1.5 rounded-full transition-colors ${isDark ? "hover:bg-gray-800 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
         >
@@ -171,6 +179,8 @@ export default function DayPage({ params }: { params: Promise<{ date: string }> 
             <p className={`text-sm ${isDark ? "text-gray-600" : "text-gray-400"}`}>아직 기록이 없어요</p>
             <p className={`text-xs ${isDark ? "text-gray-700" : "text-gray-300"}`}>아래 + 버튼을 눌러 추가해보세요</p>
           </div>
+        ) : viewMode === "timeline" ? (
+          <DayTimeline cards={cards} isDark={isDark} onEdit={setEditCard} />
         ) : (
           <div className="flex flex-col items-center gap-4 py-4 px-4">
             {cards.map((card, i) => {

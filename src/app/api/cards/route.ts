@@ -142,6 +142,7 @@ export async function POST(request: NextRequest) {
       title: formData.get("title") as string | null,
       content: formData.get("content") as string | null,
       time: formData.get("time") as string | null,
+      end_at: formData.get("end_at") as string | null,
       tags: parseAndValidateTags(formData.get("tags") as string | null),
       images: parseAndValidateImages(formData.get("images") as string | null),
       emojis: parseAndValidateEmojis(formData.get("emojis") as string | null),
@@ -181,11 +182,13 @@ export async function PATCH(request: NextRequest) {
     const imagesRaw = formData.get("images") as string | null;
     const emojisRaw = formData.get("emojis") as string | null;
     if (imagesRaw) parseAndValidateImages(imagesRaw); // 검증만, 실제 파싱은 updateCard 내부에서
+    const endAtRaw = formData.get("end_at") as string | null;
     const data = await updateCard(supabase, user.id, id, {
       type: formData.get("type") as string,
       title: formData.get("title") as string | null,
       content: formData.get("content") as string | null,
       time: formData.get("time") as string | null,
+      end_at: endAtRaw !== null ? endAtRaw : undefined,
       tags: tagsRaw ? parseAndValidateTags(tagsRaw) : undefined,
       newImagesJson: imagesRaw,
       emojis: emojisRaw !== null ? parseAndValidateEmojis(emojisRaw) : undefined,

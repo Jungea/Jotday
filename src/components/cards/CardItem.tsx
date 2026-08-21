@@ -201,7 +201,9 @@ export function CardItem({ card, isDark: isDarkProp, onDelete, onEdit, onCopy, o
   const addToast = useToastStore((s) => s.addToast);
   const { begin: beginLoading, end: endLoading } = useGlobalLoadingStore();
   const p = (id: string) => pinned.includes(id as never);
-  const timeLabel = format(new Date(card.created_at), "HH:mm");
+  const timeLabel = card.end_at
+    ? `${format(new Date(card.created_at), "HH:mm")} ~ ${format(new Date(card.end_at), "HH:mm")}`
+    : format(new Date(card.created_at), "HH:mm");
 
   const [sharing, setSharing] = useState(false);
   const [linked, setLinked] = useState(false);

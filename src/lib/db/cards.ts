@@ -152,7 +152,7 @@ export async function getPhotoCards(db: DB, userId: string, page: number): Promi
 
 export async function createCard(db: DB, userId: string, opts: {
   date: string; type: string; title: string | null; content: string | null;
-  time: string | null; tags: string[]; images: { url: string; public_id: string }[];
+  time: string | null; end_at: string | null; tags: string[]; images: { url: string; public_id: string }[];
   emojis: string[];
 }): Promise<Card> {
   const insert: Record<string, unknown> = {
@@ -168,6 +168,7 @@ export async function createCard(db: DB, userId: string, opts: {
     tags: opts.tags,
   };
   if (opts.time) insert.created_at = opts.time;
+  if (opts.end_at) insert.end_at = opts.end_at;
   const { data, error } = await db.from("cards").insert(insert).select().single();
   if (error) throw new Error(error.message);
   return data;
@@ -243,7 +244,7 @@ export async function setRepresentative(db: DB, userId: string, id: string): Pro
 
 export async function updateCard(db: DB, userId: string, id: string, opts: {
   type: string; title: string | null; content: string | null;
-  time: string | null; tags: string[] | undefined; newImagesJson: string | null;
+  time: string | null; end_at: string | null | undefined; tags: string[] | undefined; newImagesJson: string | null;
   emojis: string[] | undefined;
 }): Promise<Card | null> {
   const { data: existing } = await db.from("cards")
@@ -276,6 +277,7 @@ export async function updateCard(db: DB, userId: string, id: string, opts: {
       image_public_id: newImages[0]?.public_id ?? null,
     }),
     ...(opts.time && { created_at: opts.time }),
+    ...(opts.end_at !== undefined && { end_at: opts.end_at || null }),
   };
 
   const { data, error } = await db.from("cards")

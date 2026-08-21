@@ -13,6 +13,7 @@ export interface Card {
   images: { url: string; public_id: string }[];
   emojis: string[];
   tags: string[];
+  end_at: string | null;
   is_representative: boolean;
   created_at: string;
   updated_at: string;

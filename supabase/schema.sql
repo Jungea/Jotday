@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS cards (
   images JSONB DEFAULT '[]'::jsonb,
   emojis TEXT[] DEFAULT '{}',
   tags TEXT[] DEFAULT '{}',
+  end_at TIMESTAMPTZ,
   is_representative BOOLEAN DEFAULT false NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
