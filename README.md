@@ -13,17 +13,22 @@
 ## 주요 기능
 
 - 월간 달력 뷰 — 기록이 있는 날짜에 썸네일 표시, 월 이동 및 오늘 버튼
-- **빠른 카메라 촬영** — 달력 홈에서 카메라 FAB으로 찍기→크롭→바로 저장
+- **빠른 카메라 촬영** — 달력 홈에서 카메라 FAB으로 찍기→크롭→바로 저장 (백그라운드 처리)
 - 피드 뷰 — 기간·정렬 필터, 무한 스크롤
+- **타임라인 뷰** — 카드 시작·종료 시간 기록, 시간순 정렬
+- **사진 페이지** — 전체 이미지 갤러리, 5열 그리드, 월/년 구분선, 150장씩 로드
+- **추억** — 과거 같은 날 기록 모아보기
+- **갤러리 공유** — 사진 앱 등에서 공유 시 EXIF 날짜로 카드 자동 저장
 - 카드 타입: 이미지 / 텍스트 / 혼합, 다중 이미지 스와이프·라이트박스
 - **카드 컬러 바** — 시간대별 색상이 카드 간 자연스럽게 이어지는 그라데이션
-- **태그 자동완성** — 본문 `#` 입력 시 기존 태그 드롭다운 (커서 위치에 표시)
+- **태그 자동완성** — 본문 `#` 입력 시 기존 태그 드롭다운 (커서 위치에 표시), `..` → `#` 자동 변환
 - 태그 검색 + 전문 검색 — 본문 `#태그` 자동 추출, pg_trgm 인덱스
 - 공유 링크 — 카드 또는 날짜별 공유, 만료 기간 설정, SNS OG 미리보기
 - 대표 카드 설정·해제 토글
 - 카드 다운로드 — Canvas 렌더링 PNG 저장
 - 테마: 라이트 / 다크
 - 설정 서버 동기화 — 테마·카드 액션·피드 필터·공유 설정을 Supabase에 저장, 멀티 디바이스 동기화
+- **스택 기반 모달 뒤로가기** — 모달·시트 열린 상태에서 기기 뒤로가기로 닫기 지원
 - **토스트 알림** — 링크 복사, 카드 복사, 날짜 이동, 대표 설정 등 주요 액션 피드백
 
 ## 프로젝트 구조
@@ -36,19 +41,24 @@ src/
 │   │   ├── page.tsx               # 홈 (달력 + 빠른 카메라 FAB)
 │   │   ├── [date]/page.tsx        # 날짜별 카드 목록
 │   │   ├── feed/page.tsx          # 피드
+│   │   ├── photos/page.tsx        # 사진 갤러리
+│   │   ├── memories/page.tsx      # 추억 (과거 같은 날 기록)
+│   │   ├── stats/page.tsx         # 통계
 │   │   ├── search/page.tsx        # 태그·전문 검색
 │   │   ├── settings/page.tsx      # 설정
 │   │   └── links/page.tsx         # 공유 링크 관리
 │   ├── api/cards/route.ts         # 카드 CRUD + 검색 + 태그 목록
 │   ├── api/share/route.ts         # 공유 토큰 관리
 │   ├── api/settings/route.ts      # 설정 조회·저장
+│   ├── api/stats/route.ts         # 통계 데이터
 │   └── share/[token]/page.tsx     # 공개 공유 페이지 (OG 메타태그 포함)
 ├── components/
 │   ├── calendar/CalendarGrid.tsx
 │   ├── cards/CardItem.tsx, CardForm.tsx (태그 자동완성 포함)
 │   └── ui/Toast.tsx, PWAUpdatePrompt.tsx, ...
-├── lib/supabase/                  # client, server, middleware
+├── lib/supabase/                  # client, server, proxy
 ├── lib/cloudinary/
+├── lib/db/cards.ts                # 카드 DB 쿼리 로직
 ├── lib/timeColor.ts               # 시간대별 카드 컬러 바 그라데이션
 ├── store/                         # theme, cardActions, feedPresets, shareSettings, toast
 └── types/index.ts
